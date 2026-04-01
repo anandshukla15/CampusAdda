@@ -12,3 +12,11 @@ exports.addCollege = (req, res) => {
     }
   );
 };
+
+
+
+exports.getColleges = (req, res) => {
+  db.query("SELECT * FROM colleges", (err, result) => {
+    res.json(result);
+  });
+};
