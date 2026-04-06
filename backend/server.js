@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/colleges", collegeRoutes);
-app.use("/api/president", presidentRoutes);
+app.use("/api/president",   presidentRoutes);
 
 app.get("/",(req,res)=>{
     res.send("Hello World working fine");
