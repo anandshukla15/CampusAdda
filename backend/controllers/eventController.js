@@ -13,3 +13,17 @@ exports.createEvent = async (req, res) => {
     }
   );
 };
+
+exports.getEvents = (req, res) => {
+  db.query("SELECT * FROM events WHERE is_approved=TRUE", (err, result) => {
+    res.json(result);
+  });
+};
+
+exports.approveEvent = (req, res) => {
+  const { id } = req.params;
+
+  db.query("UPDATE events SET is_approved=TRUE WHERE id=?", [id], () => {
+    res.json({ msg: "Event approved" });
+  });
+};
