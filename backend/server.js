@@ -8,7 +8,6 @@ const eventRoutes = require("./routes/eventRoutes");
 
 require("./config/db");
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
