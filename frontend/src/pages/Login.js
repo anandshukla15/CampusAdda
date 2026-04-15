@@ -11,7 +11,7 @@ export default function Login() {
     alert("Login Success");
   };
 
-  return (
+return (
     <form onSubmit={handleSubmit}>
       <h2>Login</h2>
       <input placeholder="Email" onChange={e => setForm({...form, email:e.target.value})} />
