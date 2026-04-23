@@ -15,7 +15,7 @@ exports.createEvent = async (req, res) => {
 };
 
 exports.getEvents = (req, res) => {
-  db.query("SELECT * FROM events WHERE is_approved=TRUE", (err, result) => {
+  db.query("SELECT * FROM events WHERE is_approved=TRUE" , (err, result) => {
     res.json(result);
   });
 };
