@@ -15,9 +15,15 @@ exports.createEvent = async (req, res) => {
 };
 
 exports.getEvents = (req, res) => {
-  db.query("SELECT * FROM events WHERE is_approved=TRUE" , (err, result) => {
-    res.json(result);
-  });
+  const { city, category } = req.query;
+
+  db.query("SELECT * FROM events WHERE is_approved=TRUE AND (city=? OR city IS NULL) AND (category=? OR category IS NULL)",
+    [city, category],
+    (err, result) => {
+      if (err) return res.status(500).json(err);
+      res.json(result);
+    }
+  );
 };
 
 exports.approveEvent = (req, res) => {
