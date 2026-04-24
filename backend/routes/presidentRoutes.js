@@ -6,7 +6,6 @@ const {
   applyPresident,
   approvePresident
 } = require("../controllers/presidentController");
-
 router.post("/apply", auth, upload.single("document"), applyPresident);
 router.put("/approve/:userId", approvePresident);
 
