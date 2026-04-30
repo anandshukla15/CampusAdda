@@ -11,12 +11,16 @@ export default function Login() {
     alert("Login Success");
   };
 
-return (
-    <form onSubmit={handleSubmit}>
-      <h2>Login</h2>
-      <input placeholder="Email" onChange={e => setForm({...form, email:e.target.value})} />
-      <input type="password" placeholder="Password" onChange={e => setForm({...form, password:e.target.value})} />
-      <button>Login</button>
+  return (
+    <form className="p-5" onSubmit={handleSubmit}>
+      <input placeholder="Email" className="border p-2 block mb-2"
+        onChange={e => setForm({...form,email:e.target.value})}
+      />
+      <input type="password" placeholder="Password"
+        className="border p-2 block mb-2"
+        onChange={e => setForm({...form,password:e.target.value})}
+      />
+      <button className="bg-green-500 text-white px-4">Login</button>
     </form>
   );
 }
