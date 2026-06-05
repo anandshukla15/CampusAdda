@@ -4,10 +4,13 @@ import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import PresidentDashboard from "./pages/PresidentDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Nav from "./components/Nav";
 
 function App() {
   return (
     <BrowserRouter>
+      <Nav />
+      <div className="min-h-screen bg-gray-100">
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
@@ -24,6 +27,7 @@ function App() {
           </ProtectedRoute>
         } />
       </Routes>
+      </div>
     </BrowserRouter>
   );
 }
