@@ -1,22 +1,27 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 
 export default function Register() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     try {
       await API.post("/auth/register", form);
-      alert("Registered Successfully");
+      navigate("/login");
     } catch (err) {
-      alert(err?.response?.data?.error || "Registration failed");
+      setError(err?.response?.data?.error || "Registration failed");
     }
   };
 
   return (
     <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded shadow">
       <h2 className="text-xl font-semibold mb-4">Create account</h2>
+      {error && <div className="mb-3 text-red-600">{error}</div>}
       <form onSubmit={handleSubmit}>
         <label className="block text-sm mb-1">Name</label>
         <input

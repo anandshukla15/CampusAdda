@@ -20,6 +20,10 @@ npm run dev
 
 The backend will run on port 5000 by default.
 
+Backend admin login
+- The app supports an environment-based admin login via `ADMIN_USERNAME` and `ADMIN_PASSWORD` in `.env`.
+- If a login matches those credentials, the backend will issue a token with `role = admin`.
+
 Frontend
 1. Open terminal in `frontend` folder.
 2. Install dependencies and start:
@@ -34,7 +38,9 @@ The frontend dev server runs on port 3000.
 
 Notes
 - Login tokens are stored in `localStorage` under `token`.
-- Admin users must have `role` = `admin` in the `users` table; president users must have `role` = `president`.
+- Admin users must have `role` = `admin` in the `users` table or use the `.env` admin credentials.
+- President users can register as normal users, apply for president through the President dashboard, and wait for admin approval.
+- Public event browsing only shows admin-approved events.
 
 If you want, I can:
 - Seed an admin account for testing.

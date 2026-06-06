@@ -3,9 +3,10 @@ import { getUser } from "../utils/decodeToken";
 
 export default function ProtectedRoute({ children, role }) {
   const user = getUser();
+  const roles = Array.isArray(role) ? role : [role];
 
   if (!user) return <Navigate to="/login" />;
-  if (role && user.role !== role) return <Navigate to="/" />;
+  if (role && !roles.includes(user.role)) return <Navigate to="/" />;
 
   return children;
 }

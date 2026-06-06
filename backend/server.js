@@ -8,6 +8,7 @@ const authRoutes = require("./routes/authRoutes");
 const collegeRoutes = require("./routes/collegeRoutes");
 const presidentRoutes = require("./routes/presidentRoutes");
 const eventRoutes = require("./routes/eventRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 require("./config/db");
 
@@ -23,6 +24,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/colleges", collegeRoutes);
 app.use("/api/president", presidentRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/users", userRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello World working fine");

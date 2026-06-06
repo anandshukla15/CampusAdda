@@ -18,7 +18,7 @@ export default function Login() {
       localStorage.setItem("token", res.data.token);
       const user = getUser();
       if (user?.role === "admin") navigate("/admin");
-      else if (user?.role === "president") navigate("/president");
+      else if (user?.role === "president" || user?.role === "pending_president") navigate("/president");
       else navigate("/");
     } catch (err) {
       setError(err?.response?.data?.msg || err.message || "Login failed");
