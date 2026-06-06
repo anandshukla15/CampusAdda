@@ -3,18 +3,51 @@ const bcrypt=require("bcrypt");
 const jwt=require("jsonwebtoken");
 
 exports.register = async (req, res) => {
-  const { name, email, password } = req.body;
-  const hashed = await bcrypt.hash(password, 10);
-  db.query(
-    "INSERT INTO users(name,email,password,role) VALUES(?,?,?,?)",
-    [name, email, hashed, "user"],
-    (err, result) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
+  const { name, email, password, role = "user", college_name, roll_no } = req.body;
+  
+  // Validate role
+  if (!["user", "president"].includes(role)) {
+    return res.status(400).json({ error: "Invalid role. Only 'user' and 'president' allowed during registration" });
+  }
+
+  try {
+    const hashed = await bcrypt.hash(password, 10);
+    
+    db.query(
+      "INSERT INTO users(name,email,password,role,college_name,roll_no) VALUES(?,?,?,?,?,?)",
+      [name, email, hashed, role === "president" ? "user" : role, college_name || null, roll_no || null],
+      (err, result) => {
+        if (err) {
+          if (err.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ error: "Email already exists" });
+          }
+          return res.status(500).json({ error: err.message });
+        }
+        
+        const userId = result.insertId;
+
+        // If registering as president, create application
+        if (role === "president") {
+          db.query(
+            "INSERT INTO president_applications(user_id,name,roll_no,college_name,status) VALUES(?,?,?,?,?)",
+            [userId, name, roll_no, college_name, "pending"],
+            (err) => {
+              if (err) {
+                return res.status(500).json({ error: err.message });
+              }
+              res.status(201).json({ 
+                message: "Registered successfully. Please submit president application documents." 
+              });
+            }
+          );
+        } else {
+          res.status(201).json({ message: "User registered successfully" });
+        }
       }
-      res.status(201).json({ message: "User registered successfully" });
-    }
-  );
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
 exports.login=async(req,res)=>{
@@ -27,7 +60,7 @@ exports.login=async(req,res)=>{
     if (password !== adminPass) return res.status(400).json({ msg: "Wrong password" });
 
     const token = jwt.sign({ id: "admin", role: "admin" }, process.env.JWT_SECRET);
-    return res.json({ token });
+    return res.json({ token, role: "admin", userId: "admin" });
   }
 
   // Regular user login (DB)
@@ -42,6 +75,6 @@ exports.login=async(req,res)=>{
 
     const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET);
 
-    res.json({ token });
+    res.json({ token, role: user.role, userId: user.id, name: user.name });
   });
 };

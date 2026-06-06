@@ -1,21 +1,43 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/authMiddleware");
-const role = require("../middleware/roleMiddleware");
 const {
-  createEvent,
-  getEvents,
+  getAllEvents,
   getEventById,
-  getMyEvents,
-  getPendingEvents,
-  approveEvent
+  createEvent,
+  updateEvent,
+  deleteEvent,
+  getEventsByCreator,
+  saveEvent,
+  unsaveEvent,
+  getSavedEvents
 } = require("../controllers/eventController");
 
-router.post("/", auth, role(["president", "admin"]), createEvent);
-router.get("/", getEvents);
-router.get("/my", auth, role(["president", "admin"]), getMyEvents);
-router.get("/pending", auth, role("admin"), getPendingEvents);
+// Get all events
+router.get("/", getAllEvents);
+
+// Get event by ID
 router.get("/:id", getEventById);
-router.put("/approve/:id", auth, role("admin"), approveEvent);
+
+// Create event (Presidents and Admins only)
+router.post("/", auth, createEvent);
+
+// Update event
+router.put("/:id", auth, updateEvent);
+
+// Delete event
+router.delete("/:id", auth, deleteEvent);
+
+// Get events by creator
+router.get("/creator/:creatorId", getEventsByCreator);
+
+// Save event
+router.post("/:eventId/save", auth, saveEvent);
+
+// Unsave event
+router.delete("/:eventId/save", auth, unsaveEvent);
+
+// Get saved events
+router.get("/saved/all", auth, getSavedEvents);
 
 module.exports = router;

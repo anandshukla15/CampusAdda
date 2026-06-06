@@ -1,0 +1,61 @@
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('user', 'president', 'admin') DEFAULT 'user',
+    college_id INT,
+    roll_no VARCHAR(50),
+    college_name VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create president_applications table
+CREATE TABLE IF NOT EXISTS president_applications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    roll_no VARCHAR(50) NOT NULL,
+    college_name VARCHAR(255) NOT NULL,
+    document_url VARCHAR(500),
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    admin_comments VARCHAR(1000),
+    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    approved_at TIMESTAMP NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Create events table
+CREATE TABLE IF NOT EXISTS events (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    category ENUM('cultural', 'sports', 'tech') NOT NULL,
+    date DATETIME NOT NULL,
+    description TEXT,
+    link VARCHAR(500),
+    photo_url VARCHAR(500),
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Create saved_events table (for users to bookmark events)
+CREATE TABLE IF NOT EXISTS saved_events (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    event_id INT NOT NULL,
+    saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_event (user_id, event_id)
+);
+
+-- Create colleges table
+CREATE TABLE IF NOT EXISTS colleges (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

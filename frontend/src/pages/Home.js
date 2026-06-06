@@ -1,83 +1,94 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import API from "../services/api";
-import socket from "../services/socket";
 import EventCard from "../components/EventCard";
 
 export default function Home() {
   const [events, setEvents] = useState([]);
-  const [filters, setFilters] = useState({ city: "", category: "" });
-  const [savedIds, setSavedIds] = useState(() => JSON.parse(localStorage.getItem("savedEvents") || "[]"));
-
-  const fetchEvents = useCallback(() => {
-    API.get(`/events?city=${filters.city}&category=${filters.category}`).then(
-      (res) => setEvents(res.data || [])
-    );
-  }, [filters.city, filters.category]);
+  const [filteredEvents, setFilteredEvents] = useState([]);
+  const [category, setCategory] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchEvents();
+  }, []);
 
-    const handler = (data) => {
-      alert("New Event: " + data.title);
-      fetchEvents();
-    };
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const res = await API.get("/api/events");
+      setEvents(res.data || []);
+      setFilteredEvents(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch events", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    socket.on("new_event", handler);
-    return () => socket.off("new_event", handler);
-  }, [fetchEvents]);
-
-  const saveEvent = (event) => {
-    const saved = JSON.parse(localStorage.getItem("savedEvents") || "[]");
-    if (!saved.includes(event.id)) {
-      const next = [...saved, event.id];
-      localStorage.setItem("savedEvents", JSON.stringify(next));
-      setSavedIds(next);
+  const handleCategoryFilter = (selectedCategory) => {
+    setCategory(selectedCategory);
+    if (!selectedCategory) {
+      setFilteredEvents(events);
+    } else {
+      setFilteredEvents(events.filter((e) => e.category === selectedCategory));
     }
   };
 
   return (
-    <div className="p-5 max-w-5xl mx-auto">
-      <div className="bg-white rounded shadow p-6 mb-6">
-        <h1 className="text-3xl font-bold mb-2">Campus Adda</h1>
-        <p className="text-gray-600">Discover campus events across tech, cultural, sports, and academic communities.</p>
+    <div className="p-6 max-w-6xl mx-auto">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg shadow p-8 mb-8">
+        <h1 className="text-4xl font-bold mb-2">Campus Adda</h1>
+        <p className="text-lg">Discover amazing events in your college - Cultural, Sports, and Tech events!</p>
       </div>
 
-      <div className="bg-white rounded shadow p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Discover events</h2>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            placeholder="City"
-            className="border p-3 rounded w-full"
-            value={filters.city}
-            onChange={(e) => setFilters({ ...filters, city: e.target.value })}
-          />
-          <select
-            className="border p-3 rounded w-full sm:w-64"
-            value={filters.category}
-            onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-          >
-            <option value="">All categories</option>
-            <option value="Tech">Tech</option>
-            <option value="Cultural">Cultural</option>
-            <option value="Sports">Sports</option>
-            <option value="Workshop">Workshop</option>
-            <option value="Seminar">Seminar</option>
-          </select>
+      {/* Filters Section */}
+      <div className="bg-white rounded shadow p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-4">Filter Events</h2>
+        <div className="flex flex-wrap gap-3">
           <button
-            onClick={fetchEvents}
-            className="bg-blue-600 text-white px-5 py-3 rounded w-full sm:w-auto"
+            onClick={() => handleCategoryFilter("")}
+            className={`px-4 py-2 rounded font-medium transition ${
+              category === ""
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+            }`}
           >
-            Search
+            All Events
           </button>
+          {["cultural", "sports", "tech"].map((cat) => (
+            <button
+              key={cat}
+              onClick={() => handleCategoryFilter(cat)}
+              className={`px-4 py-2 rounded font-medium transition capitalize ${
+                category === cat
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
         </div>
+        <p className="text-sm text-gray-600 mt-4">
+          Showing {filteredEvents.length} event{filteredEvents.length !== 1 ? "s" : ""}
+        </p>
       </div>
 
-      <div className="grid gap-4">
-        {events.length === 0 && <div className="text-gray-600">No events found. Try another city or category.</div>}
-        {events.map((event) => (
-          <EventCard key={event.id} e={event} onSave={saveEvent} saved={savedIds.includes(event.id)} />
-        ))}
-      </div>
+      {/* Events Grid */}
+      {loading ? (
+        <div className="text-center py-12 text-gray-600">Loading events...</div>
+      ) : filteredEvents.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-600 text-lg">No events found in this category.</p>
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredEvents.map((event) => (
+            <EventCard key={event.id} event={event} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

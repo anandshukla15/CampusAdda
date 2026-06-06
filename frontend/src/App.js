@@ -15,7 +15,7 @@ function App() {
     <BrowserRouter>
       <Nav />
       <div className="min-h-screen bg-gray-100">
-      <Routes>
+        <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

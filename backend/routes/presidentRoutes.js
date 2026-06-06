@@ -2,15 +2,27 @@ const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/authMiddleware");
 const role = require("../middleware/roleMiddleware");
-const upload = require("../middleware/upload");
 const {
-  applyPresident,
-  getPresidentRequests,
-  approvePresident
-} = require("../controllers/presidentController");
+  applyForPresident,
+  getPendingApplications,
+  approveApplication,
+  rejectApplication,
+  getApplicationStatus
+} = require("../controllers/presidentApplicationController");
 
-router.post("/apply", auth, upload.single("document"), applyPresident);
-router.get("/requests", auth, role("admin"), getPresidentRequests);
-router.put("/approve/:userId", auth, role("admin"), approvePresident);
+// User applies for president
+router.post("/apply/:userId", auth, applyForPresident);
+
+// Get application status
+router.get("/status/:userId", auth, getApplicationStatus);
+
+// Admin gets all pending applications
+router.get("/applications/pending", auth, role("admin"), getPendingApplications);
+
+// Admin approves application
+router.put("/approve/:applicationId", auth, role("admin"), approveApplication);
+
+// Admin rejects application
+router.put("/reject/:applicationId", auth, role("admin"), rejectApplication);
 
 module.exports = router;

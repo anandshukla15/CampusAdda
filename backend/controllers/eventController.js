@@ -1,91 +1,237 @@
-const db= require("../config/db");
-const socket= require("../config/socket");
+const db = require("../config/db");
 
-exports.createEvent = (req, res) => {
-  const {
-    title,
-    description,
-    category,
-    location,
-    city,
-    start_date,
-    end_date
-  } = req.body;
+// Get all events (everyone can view)
+exports.getAllEvents = async (req, res) => {
+  try {
+    db.query(
+      `SELECT e.*, u.name as created_by_name, u.role as creator_role 
+       FROM events e 
+       JOIN users u ON e.created_by = u.id 
+       ORDER BY e.date DESC`,
+      (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(result);
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
+// Get event by ID
+exports.getEventById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    db.query(
+      `SELECT e.*, u.name as created_by_name, u.email as creator_email 
+       FROM events e 
+       JOIN users u ON e.created_by = u.id 
+       WHERE e.id = ?`,
+      [id],
+      (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!result || result.length === 0) {
+          return res.status(404).json({ error: "Event not found" });
+        }
+        res.json(result[0]);
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Create event (Presidents and Admins only)
+exports.createEvent = async (req, res) => {
+  const userId = req.user.id;
+  const role = req.user.role;
+  const { name, category, date, description, link, photo_url } = req.body;
+
+  // Check if user is president or admin
+  if (role !== "president" && role !== "admin") {
+    return res.status(403).json({ error: "Only presidents and admins can create events" });
+  }
+
+  // Validate required fields
+  if (!name || !category || !date) {
+    return res.status(400).json({ error: "Name, category, and date are required" });
+  }
+
+  if (!["cultural", "sports", "tech"].includes(category)) {
+    return res.status(400).json({ error: "Invalid category. Must be cultural, sports, or tech" });
+  }
+
+  try {
+    db.query(
+      "INSERT INTO events (name, category, date, description, link, photo_url, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [name, category, date, description || null, link || null, photo_url || null, userId],
+      (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ 
+          message: "Event created successfully",
+          eventId: result.insertId
+        });
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Update event (Presidents/Admins can edit their own or admins can edit any)
+exports.updateEvent = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  const role = req.user.role;
+  const { name, category, date, description, link, photo_url } = req.body;
+
+  try {
+    // Check if event exists and get creator
+    db.query(
+      "SELECT created_by FROM events WHERE id = ?",
+      [id],
+      (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!result || result.length === 0) {
+          return res.status(404).json({ error: "Event not found" });
+        }
+
+        // Check authorization
+        if (role !== "admin" && result[0].created_by !== userId) {
+          return res.status(403).json({ error: "You can only edit your own events" });
+        }
+
+        // Update event
+        db.query(
+          "UPDATE events SET name=?, category=?, date=?, description=?, link=?, photo_url=? WHERE id=?",
+          [name, category, date, description || null, link || null, photo_url || null, id],
+          (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: "Event updated successfully" });
+          }
+        );
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Delete event (Presidents/Admins can delete their own or admins can delete any)
+exports.deleteEvent = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  const role = req.user.role;
+
+  try {
+    // Check if event exists and get creator
+    db.query(
+      "SELECT created_by FROM events WHERE id = ?",
+      [id],
+      (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!result || result.length === 0) {
+          return res.status(404).json({ error: "Event not found" });
+        }
+
+        // Check authorization
+        if (role !== "admin" && result[0].created_by !== userId) {
+          return res.status(403).json({ error: "You can only delete your own events" });
+        }
+
+        // Delete event
+        db.query("DELETE FROM events WHERE id = ?", [id], (err) => {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({ message: "Event deleted successfully" });
+        });
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get events by creator
+exports.getEventsByCreator = async (req, res) => {
+  const { creatorId } = req.params;
+
+  try {
+    db.query(
+      "SELECT * FROM events WHERE created_by = ? ORDER BY date DESC",
+      [creatorId],
+      (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(result);
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Save event (bookmark)
+exports.saveEvent = async (req, res) => {
+  const userId = req.user.id;
+  const { eventId } = req.params;
+
+  try {
+    db.query(
+      "INSERT INTO saved_events (user_id, event_id) VALUES (?, ?)",
+      [userId, eventId],
+      (err) => {
+        if (err) {
+          if (err.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ error: "Event already saved" });
+          }
+          return res.status(500).json({ error: err.message });
+        }
+        res.status(201).json({ message: "Event saved successfully" });
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Unsave event
+exports.unsaveEvent = async (req, res) => {
+  const userId = req.user.id;
+  const { eventId } = req.params;
+
+  try {
+    db.query(
+      "DELETE FROM saved_events WHERE user_id = ? AND event_id = ?",
+      [userId, eventId],
+      (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Event removed from saved" });
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get saved events
+exports.getSavedEvents = async (req, res) => {
   const userId = req.user.id;
 
-  db.query(
-    `INSERT INTO events 
-    (title,description,category,created_by,location,city,start_date,end_date,is_approved)
-    VALUES (?,?,?,?,?,?,?,?,FALSE)`,
-    [
-      title,
-      description,
-      category,
-      userId,
-      location,
-      city,
-      start_date,
-      end_date
-    ],
-    (err, result) => {
-      if (err) return res.status(500).json(err);
-
-      const io = socket.getIO();
-      io.emit("new_event", {
-        title,
-        message: "New event created"
-      });
-
-      res.json({ msg: "Event Created Successfully" });
-    }
-  );
-};
-
-exports.getEvents = (req, res) => {
-  const { city = "", category = "" } = req.query;
-  const sql = `SELECT * FROM events WHERE is_approved=TRUE
-    ${city ? "AND city LIKE ?" : ""}
-    ${category ? "AND category LIKE ?" : ""}`.replace(/\s+/g, " ");
-
-  const params = [];
-  if (city) params.push(`%${city}%`);
-  if (category) params.push(`%${category}%`);
-
-  db.query(sql, params, (err, result) => {
-    if (err) return res.status(500).json(err);
-    res.json(result);
-  });
-};
-
-exports.getEventById = (req, res) => {
-  const { id } = req.params;
-  db.query("SELECT * FROM events WHERE id=? AND is_approved=TRUE", [id], (err, result) => {
-    if (err) return res.status(500).json(err);
-    if (!result || result.length === 0) return res.status(404).json({ message: "Event not found" });
-    res.json(result[0]);
-  });
-};
-
-exports.getMyEvents = (req, res) => {
-  const userId = req.user.id;
-  db.query("SELECT * FROM events WHERE created_by=?", [userId], (err, result) => {
-    if (err) return res.status(500).json(err);
-    res.json(result);
-  });
-};
-
-exports.getPendingEvents = (req, res) => {
-  db.query("SELECT * FROM events WHERE is_approved=FALSE", (err, result) => {
-    if (err) return res.status(500).json(err);
-    res.json(result);
-  });
-};
-
-exports.approveEvent = (req, res) => {
-  const { id } = req.params;
-  db.query("UPDATE events SET is_approved=TRUE WHERE id=?", [id], (err) => {
-    if (err) return res.status(500).json(err);
-    res.json({ msg: "Event approved" });
-  });
+  try {
+    db.query(
+      `SELECT e.*, u.name as created_by_name, u.role as creator_role 
+       FROM events e 
+       JOIN saved_events se ON e.id = se.event_id 
+       JOIN users u ON e.created_by = u.id 
+       WHERE se.user_id = ? 
+       ORDER BY e.date DESC`,
+      [userId],
+      (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(result);
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
