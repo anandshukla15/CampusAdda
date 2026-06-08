@@ -19,6 +19,7 @@ export default function AdminDashboard() {
       const res = await API.get("/president/applications/pending");
       setApplications(res.data || []);
     } catch (err) {
+      console.log("Failed to load applications", err);
       setError("Failed to load applications");
       console.error(err);
     } finally {

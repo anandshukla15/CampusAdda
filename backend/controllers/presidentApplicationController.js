@@ -51,6 +51,7 @@ exports.getPendingApplications = async (req, res) => {
     db.query(
       "SELECT pa.*, u.email FROM president_applications pa JOIN users u ON pa.user_id = u.id WHERE pa.status = 'pending' ORDER BY pa.submitted_at DESC",
       (err, result) => {
+        console.error("Pending applications error:", err);
         if (err) return res.status(500).json({ error: err.message });
         res.json(result);
       }
