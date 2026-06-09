@@ -26,7 +26,7 @@ exports.register = async (req, res) => {
         
         const userId = result.insertId;
 
-        console.log(`User registered with ID: ${userId} and role: ${role}`);
+        //console.log(`User registered with ID: ${userId} and role: ${role}`);
         if (role === "president") {
           db.query(
             "INSERT INTO president_applications(user_id,name,roll_no,college_name,status) VALUES(?,?,?,?,?)",
