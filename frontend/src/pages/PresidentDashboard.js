@@ -299,10 +299,10 @@ function EventForm({ event, onSuccess }) {
 
     try {
       if (event) {
-        await API.put(`/api/events/${event.id}`, form);
+        await API.put(`/events/${event.id}`, form);
         alert("Event updated successfully");
       } else {
-        await API.post("/api/events", form);
+        await API.post("/events/create", form);
         alert("Event created successfully");
       }
       onSuccess();

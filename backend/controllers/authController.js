@@ -55,8 +55,9 @@ exports.login=async(req,res)=>{
   // Admin login via environment variables (centralized control)
   const adminUser = process.env.ADMIN_USERNAME;
   const adminPass = process.env.ADMIN_PASSWORD;
+  const adminEmail = process.env.ADMIN_EMAIL;
 
-  if (adminUser && adminPass && email === adminUser) {
+  if (adminUser && adminPass && email === adminEmail) {
     if (password !== adminPass) return res.status(400).json({ msg: "Wrong password" });
 
     const token = jwt.sign({ id: "admin", role: "admin" }, process.env.JWT_SECRET);

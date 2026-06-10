@@ -1,14 +1,19 @@
-const db= require("../config/db");
+const db = require("../config/db");
 
 exports.applyPresident = (req, res) => {
-  const { college_id } = req.body;
   const userId = req.user.id;
+  const { name, roll_no, college_name } = req.body;
+  const document_url = req.file ? req.file.path : req.body.document_url || null;
+
+  if (!name || !roll_no || !college_name) {
+    return res.status(400).json({ error: "name, roll_no and college_name are required" });
+  }
 
   db.query(
-    "UPDATE users SET role='pending_president', college_id=?, document_url=?, is_verified=FALSE WHERE id=?",
-    [college_id, req.file.path, userId],
+    "INSERT INTO president_applications (user_id, name, roll_no, college_name, document_url, status) VALUES (?, ?, ?, ?, ?, 'pending') ON DUPLICATE KEY UPDATE document_url = ?, status = 'pending'",
+    [userId, name, roll_no, college_name, document_url, document_url],
     (err) => {
-      if (err) return res.status(500).json(err);
+      if (err) return res.status(500).json({ error: err.message });
       res.json({ msg: "President application submitted" });
     }
   );
@@ -16,9 +21,9 @@ exports.applyPresident = (req, res) => {
 
 exports.getPresidentRequests = (req, res) => {
   db.query(
-    "SELECT id,name,email,college_id,document_url FROM users WHERE role='pending_president'",
+    "SELECT pa.id, pa.user_id, pa.name, pa.roll_no, pa.college_name, pa.document_url, u.email FROM president_applications pa JOIN users u ON pa.user_id = u.id WHERE pa.status = 'pending' ORDER BY pa.submitted_at DESC",
     (err, result) => {
-      if (err) return res.status(500).json(err);
+      if (err) return res.status(500).json({ error: err.message });
       res.json(result);
     }
   );
@@ -28,11 +33,15 @@ exports.approvePresident = (req, res) => {
   const { userId } = req.params;
 
   db.query(
-    "UPDATE users SET role='president', is_verified=TRUE WHERE id=?",
+    "UPDATE president_applications SET status = 'approved', approved_at = NOW() WHERE user_id = ?",
     [userId],
     (err) => {
-      if (err) return res.status(500).json(err);
-      res.json({ msg: "President approved" });
+      if (err) return res.status(500).json({ error: err.message });
+
+      db.query("UPDATE users SET role = 'president' WHERE id = ?", [userId], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ msg: "President approved" });
+      });
     }
   );
 };

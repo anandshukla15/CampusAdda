@@ -20,7 +20,7 @@ router.get("/", getAllEvents);
 router.get("/:id", getEventById);
 
 // Create event (Presidents and Admins only)
-router.post("/", auth, createEvent);
+router.post("/create", auth, createEvent);
 
 // Update event
 router.put("/:id", auth, updateEvent);

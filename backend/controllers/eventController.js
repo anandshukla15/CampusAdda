@@ -75,6 +75,7 @@ exports.createEvent = async (req, res) => {
       }
     );
   } catch (error) {
+    console.error("Error creating event:", error);
     res.status(500).json({ error: error.message });
   }
 };
