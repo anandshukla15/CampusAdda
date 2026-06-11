@@ -29,3 +29,35 @@ exports.getUsers = (req, res) => {
     }
   );
 };
+
+// Admin: delete a user
+exports.deleteUser = (req, res) => {
+  const { userId } = req.params;
+
+  db.query("DELETE FROM users WHERE id = ?", [userId], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: "User deleted" });
+  });
+};
+
+// Admin: update user role (e.g., remove president -> user)
+exports.updateUserRole = (req, res) => {
+  const { userId } = req.params;
+  const { role } = req.body;
+
+  if (!role) return res.status(400).json({ error: "Role is required" });
+
+  db.query("UPDATE users SET role = ? WHERE id = ?", [role, userId], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    // If downgrading to 'user', remove any president application record
+    if (role === 'user') {
+      db.query("DELETE FROM president_applications WHERE user_id = ?", [userId], (err2) => {
+        if (err2) console.error("Error removing president application:", err2.message);
+        return res.json({ message: "User role updated" });
+      });
+    } else {
+      res.json({ message: "User role updated" });
+    }
+  });
+};

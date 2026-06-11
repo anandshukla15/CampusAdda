@@ -4,7 +4,7 @@ const db = require("../config/db");
 exports.getAllEvents = async (req, res) => {
   try {
     db.query(
-      `SELECT e.*, u.name as created_by_name, u.role as creator_role 
+      `SELECT e.*, u.name as created_by_name, u.role as creator_role, u.college_name as creator_college_name
        FROM events e 
        JOIN users u ON e.created_by = u.id 
        ORDER BY e.date DESC`,
@@ -24,7 +24,7 @@ exports.getEventById = async (req, res) => {
 
   try {
     db.query(
-      `SELECT e.*, u.name as created_by_name, u.email as creator_email 
+      `SELECT e.*, u.name as created_by_name, u.email as creator_email, u.college_name as creator_college_name
        FROM events e 
        JOIN users u ON e.created_by = u.id 
        WHERE e.id = ?`,
@@ -159,7 +159,11 @@ exports.getEventsByCreator = async (req, res) => {
 
   try {
     db.query(
-      "SELECT * FROM events WHERE created_by = ? ORDER BY date DESC",
+      `SELECT e.*, u.name as created_by_name, u.college_name as creator_college_name
+       FROM events e
+       JOIN users u ON e.created_by = u.id
+       WHERE e.created_by = ?
+       ORDER BY e.date DESC`,
       [creatorId],
       (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -220,7 +224,7 @@ exports.getSavedEvents = async (req, res) => {
 
   try {
     db.query(
-      `SELECT e.*, u.name as created_by_name, u.role as creator_role 
+      `SELECT e.*, u.name as created_by_name, u.role as creator_role, u.college_name as creator_college_name
        FROM events e 
        JOIN saved_events se ON e.id = se.event_id 
        JOIN users u ON e.created_by = u.id 
