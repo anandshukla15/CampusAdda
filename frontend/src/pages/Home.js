@@ -15,7 +15,7 @@ export default function Home() {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const res = await API.get("/api/events");
+      const res = await API.get("/events");
       setEvents(res.data || []);
       setFilteredEvents(res.data || []);
     } catch (err) {

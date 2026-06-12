@@ -44,7 +44,7 @@ export default function PresidentDashboard() {
   const deleteEvent = async (eventId) => {
     if (window.confirm("Are you sure you want to delete this event?")) {
       try {
-        await API.delete(`/api/events/${eventId}`);
+        await API.delete(`/events/${eventId}`);
         alert("Event deleted");
         fetchMyEvents();
       } catch (err) {

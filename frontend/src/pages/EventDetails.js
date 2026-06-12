@@ -7,6 +7,7 @@ export default function EventDetails() {
   const { id } = useParams();
   const user = getUser();
   const [event, setEvent] = useState(null);
+  
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
 
@@ -48,9 +49,9 @@ export default function EventDetails() {
 
     try {
       if (isSaved) {
-        await API.delete(`/api/events/${id}/save`);
+        await API.delete(`/events/${id}/save`);
       } else {
-        await API.post(`/api/events/${id}/save`);
+        await API.post(`/events/${id}/save`);
       }
       setIsSaved(!isSaved);
     } catch (err) {
@@ -82,6 +83,7 @@ export default function EventDetails() {
             />
           </div>
         )}
+        
 
         {/* Event Details */}
         <div className="p-8">
@@ -93,7 +95,7 @@ export default function EventDetails() {
                   {event.category}
                 </span>
                 <span className="px-3 py-1 bg-gray-100 text-gray-800 font-semibold rounded">
-                  By {event.created_by_name}
+                   {event.creator_college_name}
                 </span>
               </div>
             </div>

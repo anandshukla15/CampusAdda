@@ -3,6 +3,7 @@ import API from "../services/api";
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
+  console.log("Profile data:", profile);
 
   useEffect(() => {
     API.get("/users/profile").then((res) => setProfile(res.data));

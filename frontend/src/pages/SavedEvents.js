@@ -21,7 +21,7 @@ export default function SavedEvents() {
 
   const fetchSavedEvents = async () => {
     try {
-      const res = await API.get("/api/events/saved/all");
+      const res = await API.get("/events/saved/all");
       setSavedEvents(res.data || []);
     } catch (err) {
       console.error("Failed to load saved events", err);
