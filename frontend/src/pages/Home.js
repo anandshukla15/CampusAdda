@@ -6,6 +6,7 @@ export default function Home() {
   const [events, setEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [category, setCategory] = useState("");
+  const [upcomingOnly, setUpcomingOnly] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,10 +28,22 @@ export default function Home() {
 
   const handleCategoryFilter = (selectedCategory) => {
     setCategory(selectedCategory);
+    setUpcomingOnly(false);
     if (!selectedCategory) {
       setFilteredEvents(events);
     } else {
       setFilteredEvents(events.filter((e) => e.category === selectedCategory));
+    }
+  };
+
+  const handleUpcomingFilter = () => {
+    setUpcomingOnly((prev) => !prev);
+    if (!upcomingOnly) {
+      const now = new Date();
+      setFilteredEvents(events.filter((e) => new Date(e.date) >= now));
+      setCategory("");
+    } else {
+      setFilteredEvents(events);
     }
   };
 
@@ -55,6 +68,14 @@ export default function Home() {
             }`}
           >
             All Events
+          </button>
+          <button
+            onClick={handleUpcomingFilter}
+            className={`px-4 py-2 rounded font-medium transition ${
+              upcomingOnly ? "bg-green-600 text-white" : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+            }`}
+          >
+            Upcoming
           </button>
           {["cultural", "sports", "tech"].map((cat) => (
             <button

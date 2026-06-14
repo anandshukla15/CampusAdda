@@ -9,6 +9,7 @@ const collegeRoutes = require("./routes/collegeRoutes");
 const presidentRoutes = require("./routes/presidentRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const userRoutes = require("./routes/userRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 require("./config/db");
 
@@ -25,6 +26,7 @@ app.use("/api/colleges", collegeRoutes);
 app.use("/api/president", presidentRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello World working fine");

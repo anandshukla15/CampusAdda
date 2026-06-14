@@ -59,3 +59,16 @@ CREATE TABLE IF NOT EXISTS colleges (
     name VARCHAR(255) UNIQUE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    recipient_user_id INT DEFAULT NULL,
+    recipient_role ENUM('all','admin','president','user') DEFAULT 'all',
+    type VARCHAR(100) NOT NULL,
+    message VARCHAR(1000) NOT NULL,
+    data TEXT,
+    is_read TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (recipient_user_id) REFERENCES users(id) ON DELETE SET NULL
+);

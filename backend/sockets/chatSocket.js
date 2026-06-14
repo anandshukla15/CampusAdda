@@ -9,6 +9,26 @@ module.exports = (io) => {
       console.log(`User joined room ${roomId}`);
     });
 
+    // allow client to register userId and role for targeted notifications
+    socket.on("register", (payload) => {
+      try {
+        if (!payload) return;
+        const { userId, role } = payload;
+        if (userId) {
+          const room = `user_${userId}`;
+          socket.join(room);
+          console.log(`Socket ${socket.id} joined room ${room}`);
+        }
+        if (role) {
+          const roleRoom = `role_${role}`;
+          socket.join(roleRoom);
+          console.log(`Socket ${socket.id} joined role room ${roleRoom}`);
+        }
+      } catch (err) {
+        console.error("Error in register socket handler", err);
+      }
+    });
+
     // send message
     socket.on("send_message", (data) => {
 

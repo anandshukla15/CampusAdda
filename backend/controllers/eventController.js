@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const socketConfig = require("../config/socket");
 
 // Get all events (everyone can view)
 exports.getAllEvents = async (req, res) => {
@@ -68,9 +69,31 @@ exports.createEvent = async (req, res) => {
       [name, category, date, description || null, link || null, photo_url || null, userId],
       (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ 
+        const eventId = result.insertId;
+
+        // create notification for all users
+        const message = `New event added: ${name}`;
+        const data = JSON.stringify({ eventId, name, category, date, created_by: userId });
+
+        db.query(
+          "INSERT INTO notifications (recipient_user_id, recipient_role, type, message, data) VALUES (NULL, 'all', 'new_event', ?, ?)",
+          [message, data],
+          (err) => {
+            if (err) console.error("Failed to create notification:", err.message);
+          }
+        );
+
+        // emit socket notification to all connected clients
+        try {
+          const io = socketConfig.getIO();
+          io.emit("notification", { type: "new_event", message, data: { eventId, name, category, date } });
+        } catch (err) {
+          console.error("Socket emit error:", err.message);
+        }
+
+        res.status(201).json({
           message: "Event created successfully",
-          eventId: result.insertId
+          eventId
         });
       }
     );

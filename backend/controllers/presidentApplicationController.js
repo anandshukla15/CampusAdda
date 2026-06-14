@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const socketConfig = require("../config/socket");
 
 // User applies for president role
 exports.applyForPresident = async (req, res) => {
@@ -33,6 +34,25 @@ exports.applyForPresident = async (req, res) => {
               [userId, name, roll_no, college_name, document_url, document_url],
               (err) => {
                 if (err) return res.status(500).json({ error: err.message });
+                // create a notification for admins
+                const message = `${name} applied for president (${college_name})`;
+                const data = JSON.stringify({ userId, name, college_name });
+                db.query(
+                  "INSERT INTO notifications (recipient_user_id, recipient_role, type, message, data) VALUES (NULL, 'admin', 'president_application', ?, ?)",
+                  [message, data],
+                  (err) => {
+                    if (err) console.error("Failed to create admin notification:", err.message);
+                  }
+                );
+
+                // emit to admins via socket
+                try {
+                  const io = socketConfig.getIO();
+                  io.to("role_admin").emit("notification", { type: "president_application", message, data: { userId, name, college_name } });
+                } catch (err) {
+                  console.error("Socket emit error:", err.message);
+                }
+
                 res.status(200).json({ message: "Application submitted successfully" });
               }
             );
@@ -91,6 +111,25 @@ exports.approveApplication = async (req, res) => {
               [userId],
               (err) => {
                 if (err) return res.status(500).json({ error: err.message });
+                // create notification for the user who was approved
+                const message = `Your application to become president has been approved`;
+                const data = JSON.stringify({ userId });
+                db.query(
+                  "INSERT INTO notifications (recipient_user_id, recipient_role, type, message, data) VALUES (?, NULL, 'president_approved', ?, ?)",
+                  [userId, message, data],
+                  (err) => {
+                    if (err) console.error("Failed to create approval notification:", err.message);
+                  }
+                );
+
+                // emit to the specific user via socket
+                try {
+                  const io = socketConfig.getIO();
+                  io.to(`user_${userId}`).emit("notification", { type: "president_approved", message, data: { userId } });
+                } catch (err) {
+                  console.error("Socket emit error:", err.message);
+                }
+
                 res.json({ message: "Application approved. User role updated to president" });
               }
             );
