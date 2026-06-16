@@ -4,10 +4,22 @@ const jwt=require("jsonwebtoken");
 
 exports.register = async (req, res) => {
   const { name, email, password, role = "user", college_name, roll_no } = req.body;
+  const document_url = req.file
+    ? `${req.protocol}://${req.get("host")}/${req.file.path.replace(/\\/g, "/")}`
+    : null;
   
   // Validate role
   if (!["user", "president"].includes(role)) {
     return res.status(400).json({ error: "Invalid role. Only 'user' and 'president' allowed during registration" });
+  }
+
+  if (role === "president") {
+    if (!college_name || !roll_no) {
+      return res.status(400).json({ error: "College name and roll number are required for president registration" });
+    }
+    if (!document_url) {
+      return res.status(400).json({ error: "A PDF document is required for president registration" });
+    }
   }
 
   try {
@@ -29,14 +41,15 @@ exports.register = async (req, res) => {
         //console.log(`User registered with ID: ${userId} and role: ${role}`);
         if (role === "president") {
           db.query(
-            "INSERT INTO president_applications(user_id,name,roll_no,college_name,status) VALUES(?,?,?,?,?)",
-            [userId, name, roll_no, college_name, "pending"],
+            "INSERT INTO president_applications(user_id,name,roll_no,college_name,document_url,status) VALUES(?,?,?,?,?,?)",
+            [userId, name, roll_no, college_name, document_url, "pending"],
             (err) => {
               if (err) {
+                console.error("Failed to save president application:", err);
                 return res.status(500).json({ error: err.message });
               }
               res.status(201).json({ 
-                message: "Registered successfully. Please submit president application documents." 
+                message: "Registered successfully. Your president application is pending admin approval." 
               });
             }
           );

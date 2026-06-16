@@ -12,6 +12,7 @@ export default function Register() {
     college_name: "",
     roll_no: ""
   });
+  const [documentFile, setDocumentFile] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -32,11 +33,31 @@ export default function Register() {
       return;
     }
 
+    if (form.role === "president" && !documentFile) {
+      setError("Please upload a PDF with your photo, director letter, and college ID card.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      await API.post("/auth/register", form);
+      if (form.role === "president") {
+        const formData = new FormData();
+        formData.append("name", form.name);
+        formData.append("email", form.email);
+        formData.append("password", form.password);
+        formData.append("role", form.role);
+        formData.append("college_name", form.college_name);
+        formData.append("roll_no", form.roll_no);
+        formData.append("document", documentFile);
+
+        await API.post("/auth/register", formData);
+      } else {
+        await API.post("/auth/register", form);
+      }
+
       setError("");
       if (form.role === "president") {
-        alert("Registered as President Applicant. Please submit your documents for approval.");
+        alert("Registered as President Applicant. Your PDF has been submitted and is pending admin approval.");
       }
       navigate("/login");
     } catch (err) {
@@ -50,7 +71,7 @@ export default function Register() {
     <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded shadow">
       <h2 className="text-xl font-semibold mb-4">Create account</h2>
       {error && <div className="mb-3 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} encType="multipart/form-data">
         <label className="block text-sm font-medium mb-1">Name</label>
         <input
           className="w-full border p-2 mb-3 rounded"
@@ -84,7 +105,13 @@ export default function Register() {
         <select
           className="w-full border p-2 mb-4 rounded"
           value={form.role}
-          onChange={(e) => setForm({ ...form, role: e.target.value })}
+          onChange={(e) => {
+            const selectedRole = e.target.value;
+            setForm({ ...form, role: selectedRole });
+            if (selectedRole !== "president") {
+              setDocumentFile(null);
+            }
+          }}
         >
           <option value="user">Regular User</option>
           <option value="president">President Applicant</option>
@@ -92,6 +119,15 @@ export default function Register() {
 
         {form.role === "president" && (
           <>
+            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 text-sm text-yellow-700 rounded">
+              Please upload a single PDF containing:
+              <ul className="list-disc list-inside mt-2">
+                <li>Your photo</li>
+                <li>A letter from your college director</li>
+                <li>Your college ID card photo</li>
+              </ul>
+            </div>
+
             <label className="block text-sm font-medium mb-1">College Name</label>
             <input
               className="w-full border p-2 mb-3 rounded"
@@ -106,6 +142,15 @@ export default function Register() {
               placeholder="Roll Number"
               value={form.roll_no}
               onChange={(e) => setForm({ ...form, roll_no: e.target.value })}
+            />
+
+            <label className="block text-sm font-medium mb-1">Upload Required Document (PDF)</label>
+            <input
+              type="file"
+              accept="application/pdf"
+              className="w-full mb-4"
+              onChange={(e) => setDocumentFile(e.target.files[0] || null)}
+              required
             />
           </>
         )}
