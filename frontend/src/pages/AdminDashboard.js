@@ -4,6 +4,7 @@ import API from "../services/api";
 export default function AdminDashboard() {
   const [applications, setApplications] = useState([]);
   const [events, setEvents] = useState([]);
+  const [presidents, setPresidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("applications");
@@ -12,6 +13,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchApplications();
     fetchAllEvents();
+    fetchAllPresidents();
   }, []);
 
   const fetchApplications = async () => {
@@ -33,6 +35,15 @@ export default function AdminDashboard() {
       setEvents(res.data || []);
     } catch (err) {
       console.error("Failed to load events", err);
+    }
+  };
+
+  const fetchAllPresidents = async () => {
+    try {
+      const res = await API.get("/president/all");
+      setPresidents(res.data || []);
+    } catch (err) {
+      console.error("Failed to load presidents", err);
     }
   };
 
@@ -74,6 +85,19 @@ export default function AdminDashboard() {
     }
   };
 
+  const removePresident = async (presidentId, presidentName) => {
+    if (window.confirm(`Are you sure you want to remove ${presidentName} from the president role? They will become a regular user.`)) {
+      try {
+        await API.put(`/president/${presidentId}/remove`);
+        alert(`${presidentName} has been removed from the president role`);
+        fetchAllPresidents();
+      } catch (err) {
+        alert("Failed to remove president");
+        console.error(err);
+      }
+    }
+  };
+
   if (loading) return <div className="p-6 text-center">Loading...</div>;
 
   return (
@@ -86,7 +110,7 @@ export default function AdminDashboard() {
       {error && <div className="p-4 bg-red-100 text-red-700 rounded">{error}</div>}
 
       {/* Tabs */}
-      <div className="flex border-b">
+      <div className="flex border-b flex-wrap">
         <button
           onClick={() => setActiveTab("applications")}
           className={`px-4 py-2 font-medium ${
@@ -96,6 +120,16 @@ export default function AdminDashboard() {
           }`}
         >
           President Applications ({applications.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("presidents")}
+          className={`px-4 py-2 font-medium ${
+            activeTab === "presidents" 
+              ? "border-b-2 border-blue-600 text-blue-600" 
+              : "text-gray-600"
+          }`}
+        >
+          Current Presidents ({presidents.length})
         </button>
         <button
           onClick={() => setActiveTab("events")}
@@ -165,6 +199,49 @@ export default function AdminDashboard() {
                       className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
                     >
                       Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Presidents Tab */}
+      {activeTab === "presidents" && (
+        <section className="bg-white rounded shadow p-6">
+          <h3 className="text-xl font-semibold mb-4">Current Presidents</h3>
+          {presidents.length === 0 ? (
+            <div className="text-gray-600 text-center py-8">No active presidents</div>
+          ) : (
+            <div className="space-y-4">
+              {presidents.map((president) => (
+                <div key={president.id} className="p-4 border rounded-lg bg-gray-50">
+                  <div className="grid md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Name</p>
+                      <p className="font-semibold">{president.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Email</p>
+                      <p className="font-semibold">{president.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">College</p>
+                      <p className="font-semibold">{president.college_name}</p>
+                    </div>
+                  </div>
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600">Appointed on</p>
+                    <p className="text-sm text-gray-700">{new Date(president.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => removePresident(president.id, president.name)}
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                    >
+                      Remove President
                     </button>
                   </div>
                 </div>

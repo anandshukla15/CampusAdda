@@ -181,3 +181,71 @@ exports.getApplicationStatus = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Get all current presidents (Admin only)
+exports.getAllPresidents = async (req, res) => {
+  try {
+    db.query(
+      "SELECT id, name, email, college_name, created_at FROM users WHERE role = 'president' ORDER BY created_at DESC",
+      (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(result);
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Remove a president and make them a regular user (Admin only)
+exports.removePresident = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Check if user exists and is a president
+    db.query(
+      "SELECT id, name, email FROM users WHERE id = ? AND role = 'president'",
+      [userId],
+      (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!result || result.length === 0) {
+          return res.status(404).json({ error: "President not found" });
+        }
+
+        const presidentName = result[0].name;
+
+        // Update user role back to user
+        db.query(
+          "UPDATE users SET role = 'user' WHERE id = ?",
+          [userId],
+          (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            // Create notification for the removed president
+            const message = `Your president role has been revoked by an admin. You are now a regular user.`;
+            const data = JSON.stringify({ userId });
+            db.query(
+              "INSERT INTO notifications (recipient_user_id, recipient_role, type, message, data) VALUES (?, NULL, 'president_removed', ?, ?)",
+              [userId, message, data],
+              (err) => {
+                if (err) console.error("Failed to create removal notification:", err.message);
+              }
+            );
+
+            // emit to the specific user via socket
+            try {
+              const io = socketConfig.getIO();
+              io.to(`user_${userId}`).emit("notification", { type: "president_removed", message, data: { userId } });
+            } catch (err) {
+              console.error("Socket emit error:", err.message);
+            }
+
+            res.json({ message: `${presidentName} has been removed from president role and is now a regular user` });
+          }
+        );
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

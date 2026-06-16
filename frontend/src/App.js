@@ -9,10 +9,12 @@ import Profile from "./pages/Profile";
 import SavedEvents from "./pages/SavedEvents";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Nav from "./components/Nav";
+import NotificationCenter from "./components/NotificationCenter";
 
 function App() {
   return (
     <BrowserRouter>
+      <NotificationCenter />
       <Nav />
       <div className="min-h-screen bg-gray-100">
         <Routes>

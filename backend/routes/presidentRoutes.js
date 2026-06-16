@@ -7,7 +7,9 @@ const {
   getPendingApplications,
   approveApplication,
   rejectApplication,
-  getApplicationStatus
+  getApplicationStatus,
+  getAllPresidents,
+  removePresident
 } = require("../controllers/presidentApplicationController");
 
 // User applies for president
@@ -24,5 +26,11 @@ router.put("/approve/:applicationId", auth, role("admin"), approveApplication);
 
 // Admin rejects application
 router.put("/reject/:applicationId", auth, role("admin"), rejectApplication);
+
+// Admin gets all current presidents
+router.get("/all", auth, role("admin"), getAllPresidents);
+
+// Admin removes a president (demotes to user)
+router.put("/:userId/remove", auth, role("admin"), removePresident);
 
 module.exports = router;

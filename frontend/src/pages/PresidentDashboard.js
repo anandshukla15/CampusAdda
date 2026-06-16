@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 import { getUser } from "../utils/decodeToken";
+import socket from "../services/socket";
 
 export default function PresidentDashboard() {
   const user = getUser();
@@ -40,6 +41,25 @@ export default function PresidentDashboard() {
       fetchMyEvents();
     }
   }, [user, navigate, fetchMyEvents]);
+
+  // Listen for president removal
+  useEffect(() => {
+    const handlePresidentRemoved = (notification) => {
+      if (notification.type === "president_removed") {
+        // Log out and redirect to login after showing notification
+        setTimeout(() => {
+          localStorage.removeItem("token");
+          navigate("/login");
+        }, 3000);
+      }
+    };
+
+    socket.on("notification", handlePresidentRemoved);
+
+    return () => {
+      socket.off("notification", handlePresidentRemoved);
+    };
+  }, [navigate]);
 
   const deleteEvent = async (eventId) => {
     if (window.confirm("Are you sure you want to delete this event?")) {
