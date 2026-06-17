@@ -5,6 +5,7 @@ const cors = require("cors");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const passport = require("passport");
 
 
 const authRoutes = require("./routes/authRoutes");
@@ -15,9 +16,11 @@ const userRoutes = require("./routes/userRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 
 require("./config/db");
+require("./config/passport");
 
 const socketConfig = require("./config/socket");
 const chatSocket = require("./sockets/chatSocket");
+
 
 const app = express();
 
@@ -29,6 +32,7 @@ if (!fs.existsSync(uploadsDir)) {
 app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(uploadsDir));
+app.use(passport.initialize());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/colleges", collegeRoutes);
