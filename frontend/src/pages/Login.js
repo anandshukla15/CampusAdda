@@ -13,48 +13,112 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError("");
+
     try {
       const res = await API.post("/auth/login", form);
+
       localStorage.setItem("token", res.data.token);
+
       const user = getUser();
+
       if (user?.role === "admin") navigate("/admin");
-      else if (user?.role === "president" || user?.role === "pending_president") navigate("/president");
+      else if (
+        user?.role === "president" ||
+        user?.role === "pending_president"
+      )
+        navigate("/president");
       else navigate("/");
     } catch (err) {
-      setError(err?.response?.data?.msg || err.message || "Login failed");
+      setError(err?.response?.data?.msg || "Login failed");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGoogleLogin = () => {
+    window.location.href =
+      "http://localhost:5000/api/auth/google";
+  };
+
   return (
-    <div className="max-w-md mx-auto mt-20 p-6 bg-white rounded shadow">
-      <h2 className="text-2xl mb-4 font-semibold">Sign in</h2>
-      {error && <div className="mb-2 text-red-600">{error}</div>}
+    <div className="max-w-md mx-auto mt-20 p-6 bg-white rounded-xl shadow-lg">
+      <h2 className="text-3xl font-bold text-center mb-6">
+        Welcome Back
+      </h2>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 text-red-600 rounded">
+          {error}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
-        <label className="block text-sm mb-1">Email</label>
+        <label className="block text-sm mb-1">
+          Email
+        </label>
         <input
-          placeholder="Email"
-          className="w-full border p-2 mb-3 rounded"
+          type="email"
+          placeholder="Enter email"
+          className="w-full border p-3 mb-4 rounded"
           value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, email: e.target.value })
+          }
         />
-        <label className="block text-sm mb-1">Password</label>
+
+        <label className="block text-sm mb-1">
+          Password
+        </label>
         <input
           type="password"
-          placeholder="Password"
-          className="w-full border p-2 mb-4 rounded"
+          placeholder="Enter password"
+          className="w-full border p-3 mb-4 rounded"
           value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, password: e.target.value })
+          }
         />
+
         <button
           type="submit"
-          className="w-full bg-green-600 text-white py-2 rounded disabled:opacity-50"
           disabled={loading}
+          className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded font-medium"
         >
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? "Signing In..." : "Sign In"}
         </button>
       </form>
+
+      {/* Divider */}
+      <div className="flex items-center my-6">
+        <div className="flex-1 border-t"></div>
+        <span className="px-3 text-gray-500 text-sm">
+          OR
+        </span>
+        <div className="flex-1 border-t"></div>
+      </div>
+
+      {/* Google Login */}
+      <button
+        onClick={handleGoogleLogin}
+        className="w-full border border-gray-300 py-3 rounded flex items-center justify-center gap-3 hover:bg-gray-50"
+      >
+        <img
+          src="https://www.svgrepo.com/show/475656/google-color.svg"
+          alt="Google"
+          className="w-5 h-5"
+        />
+        Continue with Google
+      </button>
+
+      <p className="text-center text-sm text-gray-500 mt-5">
+        Don't have an account?
+        <a
+          href="/register"
+          className="text-blue-600 ml-1 hover:underline"
+        >
+          Register
+        </a>
+      </p>
     </div>
   );
 }
