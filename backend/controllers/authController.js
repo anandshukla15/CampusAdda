@@ -83,6 +83,11 @@ exports.login=async(req,res)=>{
     if (!result || result.length === 0) return res.status(400).json({ msg: "User not found" });
 
     const user = result[0];
+    if (!user.password) {
+  return res.status(400).json({
+    msg: "Please login with Google"
+  });
+}
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ msg: "Wrong password" });

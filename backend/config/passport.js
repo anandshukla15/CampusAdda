@@ -25,12 +25,14 @@ passport.use(
           }
 
           db.query(
-            "INSERT INTO users(name,email,role) VALUES(?,?,?)",
-            [
-              profile.displayName,
-              email,
-              "user"
-            ],
+  "INSERT INTO users(name,email,password,role,provider) VALUES(?,?,?,?,?)",
+  [
+    profile.displayName,
+    email,
+    null,
+    "user",
+    "google"
+  ],
             (err, res) => {
               if (err) return done(err);
 
