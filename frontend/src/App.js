@@ -10,6 +10,7 @@ import SavedEvents from "./pages/SavedEvents";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Nav from "./components/Nav";
 import NotificationCenter from "./components/NotificationCenter";
+import OAuthSuccess from "./pages/OAuthSuccess"
 
 function App() {
   return (
@@ -22,6 +23,10 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/events/:id" element={<EventDetails />} />
+           <Route
+    path="/oauth-success"
+    element={<OAuthSuccess />}
+  />
           <Route path="/profile" element={
             <ProtectedRoute>
               <Profile />
