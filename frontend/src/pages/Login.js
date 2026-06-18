@@ -2,8 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 import { getUser } from "../utils/decodeToken";
-
+import { useLocation } from "react-router-dom";
 export default function Login() {
+  const location = useLocation();
+
+  console.log("LOGIN PAGE RENDERED");
+  console.trace("Who rendered login?");
+  console.log("PATH:", location.pathname);
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

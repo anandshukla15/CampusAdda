@@ -8,35 +8,31 @@ export default function OAuthSuccess() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
 
-    const token = params.get("token");
-
-//      console.log("OAuth page loaded");
-//   console.log("Token:", token);
-
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
+  // Save token only if present
+  if (token) {
     localStorage.setItem("token", token);
-    //console.log("STORED TOKEN:", localStorage.getItem("token"));
+  }
 
-    const user = getUser();
-    console.log("decode user",getUser());
+  const user = getUser();
 
-    if (user?.role === "admin") {
-        console.log("navigate admin");
-      navigate("/admin");
-    } else if (user?.role === "president") {
-        console.log("navigate president");
-      navigate("/president");
-    } else {
-        console.log("navigate home");
-      navigate("/");
-    }
-  }, [navigate]);
+  console.log("OAuth user:", user);
+
+  if (!user) {
+    navigate("/login");
+    return;
+  }
+
+  if (user.role === "admin") {
+    navigate("/admin", { replace: true });
+  } else if (user.role === "president") {
+    navigate("/president", { replace: true });
+  } else {
+    navigate("/", { replace: true });
+  }
+}, [navigate]);
 
   return (
     <div className="flex justify-center items-center h-screen">

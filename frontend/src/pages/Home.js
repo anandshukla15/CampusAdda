@@ -67,7 +67,7 @@ export default function Home() {
                 : "bg-gray-200 text-gray-800 hover:bg-gray-300"
             }`}
           >
-            All Events
+            All CAMPUS FEST
           </button>
           <button
             onClick={handleUpcomingFilter}

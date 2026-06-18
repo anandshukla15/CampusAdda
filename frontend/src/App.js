@@ -11,10 +11,23 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Nav from "./components/Nav";
 import NotificationCenter from "./components/NotificationCenter";
 import OAuthSuccess from "./pages/OAuthSuccess"
+import { useLocation } from "react-router-dom";
+
+function DebugRoute() {
+  const location = useLocation();
+
+  console.log("CURRENT ROUTE:", location.pathname);
+
+  return null;
+}
+
+
+
 
 function App() {
   return (
     <BrowserRouter>
+    <DebugRoute/>
       <NotificationCenter />
       <Nav />
       <div className="min-h-screen bg-gray-100">
