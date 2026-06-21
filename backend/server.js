@@ -12,6 +12,7 @@ const authRoutes = require("./routes/authRoutes");
 const collegeRoutes = require("./routes/collegeRoutes");
 const presidentRoutes = require("./routes/presidentRoutes");
 const eventRoutes = require("./routes/eventRoutes");
+const eventActivityRoutes = require("./routes/eventActivityRoutes");
 const userRoutes = require("./routes/userRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 
@@ -38,6 +39,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/colleges", collegeRoutes);
 app.use("/api/president", presidentRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/event-activities", eventActivityRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/notifications", notificationRoutes);
 

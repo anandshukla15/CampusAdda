@@ -10,6 +10,7 @@ export default function EventDetails() {
   
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
+  const activities = event?.activities || [];
 
   useEffect(() => {
     let mounted = true;
@@ -108,25 +109,16 @@ export default function EventDetails() {
                     : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}
               >
-                {isSaved ? "✓ Saved" : "Save Event"}
+                {isSaved ? "Saved" : "Save Event"}
               </button>
             )}
           </div>
 
-          {/* Event Info Grid */}
           <div className="grid md:grid-cols-2 gap-6 mb-8 pb-8 border-b">
             <div>
-              <p className="text-gray-600 text-sm font-medium mb-1">EVENT DATE & TIME</p>
+              <p className="text-gray-600 text-sm font-medium mb-1">LOCATION</p>
               <p className="text-2xl font-semibold">
-                📅 {new Date(event.date).toLocaleDateString("en-US", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric"
-                })}
-              </p>
-              <p className="text-lg text-gray-700 mt-1">
-                🕐 {new Date(event.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                {event.location || event.creator_college_name || "Not specified"}
               </p>
             </div>
 
@@ -148,6 +140,49 @@ export default function EventDetails() {
               </p>
             </div>
           )}
+
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold mb-4">Activities</h2>
+            {activities.length === 0 ? (
+              <p className="text-gray-600">No activities have been added yet.</p>
+            ) : (
+              <div className="space-y-4">
+                {activities.map((activity) => (
+                  <div key={activity.id} className="border rounded-lg p-4 bg-gray-50">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                      <div>
+                        <h3 className="text-xl font-semibold text-gray-900">{activity.activity_name}</h3>
+                        <p className="text-gray-700 mt-2 whitespace-pre-wrap">{activity.activity_description}</p>
+                      </div>
+                      {activity.registration_link && (
+                        <a
+                          href={activity.registration_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-semibold text-center"
+                        >
+                          Register
+                        </a>
+                      )}
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-3 mt-4 text-sm text-gray-700">
+                      <p><strong>Venue:</strong> {activity.venue}</p>
+                      <p><strong>Date:</strong> {new Date(activity.event_date).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric"
+                      })}</p>
+                      <p><strong>Time:</strong> {activity.start_time ? activity.start_time.slice(0, 5) : "Not specified"}</p>
+                      {activity.max_participants && (
+                        <p><strong>Max Participants:</strong> {activity.max_participants}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Event Link */}
           {event.link && (

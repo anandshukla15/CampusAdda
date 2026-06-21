@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 import { getUser } from "../utils/decodeToken";
 import socket from "../services/socket";
+import EventActivityFields from "../components/EventActivityFields";
 
 export default function PresidentDashboard() {
   const user = getUser();
@@ -169,7 +170,8 @@ export default function PresidentDashboard() {
                 <h4 className="font-semibold text-lg mb-2">{event.name}</h4>
                 <div className="space-y-2 text-sm text-gray-600 mb-3">
                   <p><strong>Category:</strong> <span className="capitalize">{event.category}</span></p>
-                  <p><strong>Date:</strong> {new Date(event.date).toLocaleDateString()}</p>
+                  <p><strong>Location:</strong> {event.location || event.creator_college_name || "Not specified"}</p>
+                  <p><strong>Activities:</strong> {event.activities?.length || 0}</p>
                   {event.description && <p><strong>Description:</strong> {event.description.substring(0, 100)}...</p>}
                 </div>
                 <div className="flex gap-2">
@@ -287,42 +289,114 @@ function PresidentApplicationForm({ onSuccess }) {
   );
 }
 
+const emptyActivity = {
+  activity_name: "",
+  activity_description: "",
+  venue: "",
+  event_date: "",
+  start_time: "",
+  registration_link: "",
+  max_participants: ""
+};
+
+const formatActivityForForm = (activity) => ({
+  activity_name: activity.activity_name || "",
+  activity_description: activity.activity_description || "",
+  venue: activity.venue || "",
+  event_date: activity.event_date?.split("T")[0] || activity.event_date || "",
+  start_time: activity.start_time?.slice(0, 5) || "",
+  registration_link: activity.registration_link || "",
+  max_participants: activity.max_participants || ""
+});
+
 function EventForm({ event, onSuccess }) {
   const [form, setForm] = useState(event ? {
     name: event.name,
     category: event.category,
-    date: event.date?.split('T')[0],
     description: event.description || "",
+    location: event.location || "",
     link: event.link || "",
-    photo_url: event.photo_url || ""
+    photo_url: event.photo_url || "",
+    activities: event.activities?.length
+      ? event.activities.map(formatActivityForForm)
+      : [{ ...emptyActivity }]
   } : {
     name: "",
     category: "cultural",
-    date: "",
     description: "",
+    location: "",
     link: "",
-    photo_url: ""
+    photo_url: "",
+    activities: [{ ...emptyActivity }]
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const updateActivity = (index, activity) => {
+    const nextActivities = [...form.activities];
+    nextActivities[index] = activity;
+    setForm({ ...form, activities: nextActivities });
+  };
+
+  const addActivity = () => {
+    setForm({ ...form, activities: [...form.activities, { ...emptyActivity }] });
+  };
+
+  const removeActivity = (index) => {
+    setForm({
+      ...form,
+      activities: form.activities.filter((_, activityIndex) => activityIndex !== index)
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    if (!form.name || !form.date) {
-      setError("Event name and date are required");
+    if (!form.name || !form.description || !form.location) {
+      setError("Fest name, description, and location are required");
+      setLoading(false);
+      return;
+    }
+
+    if (!form.activities.length) {
+      setError("Add at least one activity");
+      setLoading(false);
+      return;
+    }
+
+    const invalidActivity = form.activities.find(
+      (activity) =>
+        !activity.activity_name ||
+        !activity.activity_description ||
+        !activity.venue ||
+        !activity.event_date
+    );
+
+    if (invalidActivity) {
+      setError("Each activity needs a name, description, venue, and date");
       setLoading(false);
       return;
     }
 
     try {
+      const payload = {
+        ...form,
+        activities: form.activities.map((activity) => ({
+          ...activity,
+          activity_type: form.category,
+          start_time: activity.start_time || null,
+          registration_link: activity.registration_link || null,
+          max_participants: activity.max_participants || null
+        }))
+      };
+
       if (event) {
-        await API.put(`/events/${event.id}`, form);
+        await API.put(`/events/${event.id}`, payload);
         alert("Event updated successfully");
       } else {
-        await API.post("/events/create", form);
+        await API.post("/events/create", payload);
         alert("Event created successfully");
       }
       onSuccess();
@@ -337,75 +411,104 @@ function EventForm({ event, onSuccess }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <div className="p-3 bg-red-100 text-red-700 rounded">{error}</div>}
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Event Name</label>
-        <input
-          type="text"
-          className="w-full border p-2 rounded"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          placeholder="Enter event name"
-          required
-        />
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-4">
+      <section className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Category</label>
-          <select
-            className="w-full border p-2 rounded"
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
-          >
-            <option value="cultural">Cultural</option>
-            <option value="sports">Sports</option>
-            <option value="tech">Tech</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Date</label>
+          <p className="text-sm font-semibold text-blue-700 mb-2">Step 1: Fest Information</p>
+          <label className="block text-sm font-medium mb-1">Fest Name</label>
           <input
-            type="date"
+            type="text"
             className="w-full border p-2 rounded"
-            value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="Tech Fest 2026"
             required
           />
         </div>
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Description</label>
-        <textarea
-          className="w-full border p-2 rounded"
-          rows="3"
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          placeholder="Event description..."
-        />
-      </div>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Category</label>
+            <select
+              className="w-full border p-2 rounded"
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            >
+              <option value="tech">Tech</option>
+              <option value="sports">Sports</option>
+              <option value="cultural">Cultural</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Location</label>
+            <input
+              type="text"
+              className="w-full border p-2 rounded"
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+              placeholder="XYZ College"
+              required
+            />
+          </div>
+        </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Event Link (Optional)</label>
-        <input
-          type="url"
-          className="w-full border p-2 rounded"
-          value={form.link}
-          onChange={(e) => setForm({ ...form, link: e.target.value })}
-          placeholder="https://example.com/event"
-        />
-      </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Description</label>
+          <textarea
+            className="w-full border p-2 rounded"
+            rows="3"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="Fest description"
+            required
+          />
+        </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Photo URL (Optional)</label>
-        <input
-          type="url"
-          className="w-full border p-2 rounded"
-          value={form.photo_url}
-          onChange={(e) => setForm({ ...form, photo_url: e.target.value })}
-          placeholder="https://example.com/photo.jpg"
-        />
-      </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Banner Image URL (Optional)</label>
+          <input
+            type="url"
+            className="w-full border p-2 rounded"
+            value={form.photo_url}
+            onChange={(e) => setForm({ ...form, photo_url: e.target.value })}
+            placeholder="https://example.com/banner.jpg"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Fest Link (Optional)</label>
+          <input
+            type="url"
+            className="w-full border p-2 rounded"
+            value={form.link}
+            onChange={(e) => setForm({ ...form, link: e.target.value })}
+            placeholder="https://example.com/event"
+          />
+        </div>
+      </section>
+
+      <section className="space-y-4 pt-4 border-t">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-blue-700">Step 2: Activities</p>
+          <button
+            type="button"
+            onClick={addActivity}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-semibold"
+          >
+            Add Activity
+          </button>
+        </div>
+
+        {form.activities.map((activity, index) => (
+          <EventActivityFields
+            key={index}
+            activity={activity}
+            index={index}
+            onChange={updateActivity}
+            onRemove={removeActivity}
+            canRemove={form.activities.length > 1}
+          />
+        ))}
+      </section>
 
       <button
         type="submit"

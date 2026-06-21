@@ -6,6 +6,8 @@ import { getUser } from "../utils/decodeToken";
 export default function EventCard({ event }) {
   const user = getUser();
   const [isSaved, setIsSaved] = useState(false);
+  const activities = event.activities || [];
+  const firstActivity = activities[0];
 
   useEffect(() => {
     let mounted = true;
@@ -83,10 +85,30 @@ export default function EventCard({ event }) {
           <p className="text-sm text-gray-600 mb-3 line-clamp-2">{event.description}</p>
         )}
 
-        {/* Date */}
-        <div className="text-sm text-gray-700 font-medium mb-3">
-          📅 {new Date(event.date).toLocaleDateString()} {new Date(event.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        <div className="text-sm text-gray-700 mb-3 space-y-1">
+          <p className="font-medium">Location: {event.location || event.creator_college_name || "Not specified"}</p>
+          <p>{activities.length} activit{activities.length === 1 ? "y" : "ies"}</p>
+          {firstActivity && (
+            <p>
+              Starts: {new Date(firstActivity.event_date).toLocaleDateString()}
+              {firstActivity.start_time ? ` at ${firstActivity.start_time.slice(0, 5)}` : ""}
+            </p>
+          )}
         </div>
+
+        {activities.length > 0 && (
+          <div className="mb-4 space-y-2">
+            {activities.slice(0, 2).map((activity) => (
+              <div key={activity.id || activity.activity_name} className="bg-gray-50 border rounded p-2 text-sm">
+                <p className="font-semibold text-gray-900">{activity.activity_name}</p>
+                <p className="text-gray-600">{activity.venue}</p>
+              </div>
+            ))}
+            {activities.length > 2 && (
+              <p className="text-xs text-gray-500">+{activities.length - 2} more activities</p>
+            )}
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex gap-2">
@@ -105,7 +127,7 @@ export default function EventCard({ event }) {
                   : "bg-gray-200 text-gray-800 hover:bg-gray-300"
               }`}
             >
-              {isSaved ? "✓ Saved" : "Save"}
+              {isSaved ? "Saved" : "Save"}
             </button>
           )}
         </div>

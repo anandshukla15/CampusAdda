@@ -34,12 +34,32 @@ CREATE TABLE IF NOT EXISTS events (
     category ENUM('cultural', 'sports', 'tech') NOT NULL,
     date DATETIME NOT NULL,
     description TEXT,
+    location VARCHAR(255),
     link VARCHAR(500),
     photo_url VARCHAR(500),
     created_by INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Create event_activities table (activities under a fest/event)
+CREATE TABLE IF NOT EXISTS event_activities (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    event_id INT NOT NULL,
+    activity_name VARCHAR(255) NOT NULL,
+    activity_description TEXT NOT NULL,
+    activity_type VARCHAR(100) NOT NULL,
+    venue VARCHAR(255) NOT NULL,
+    event_date DATE NOT NULL,
+    start_time TIME NULL,
+    registration_link VARCHAR(500),
+    max_participants INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    INDEX idx_event_activities_event_id (event_id),
+    INDEX idx_event_activities_event_date (event_date)
 );
 
 -- Create saved_events table (for users to bookmark events)

@@ -271,8 +271,8 @@ export default function AdminDashboard() {
                       <p className="font-semibold capitalize">{event.category}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Date</p>
-                      <p className="font-semibold">{new Date(event.date).toLocaleDateString()}</p>
+                      <p className="text-sm text-gray-600">Activities</p>
+                      <p className="font-semibold">{event.activities?.length || 0}</p>
                     </div>
                   </div>
                   <div className="grid md:grid-cols-2 gap-4 mb-3">
@@ -289,6 +289,21 @@ export default function AdminDashboard() {
                     <div className="mb-3">
                       <p className="text-sm text-gray-600">Description</p>
                       <p className="text-gray-800">{event.description}</p>
+                    </div>
+                  )}
+                  {!!event.activities?.length && (
+                    <div className="mb-3">
+                      <p className="text-sm text-gray-600 mb-1">Activity Schedule</p>
+                      <div className="grid md:grid-cols-2 gap-2">
+                        {event.activities.map((activity) => (
+                          <div key={activity.id} className="bg-white border rounded p-2 text-sm">
+                            <p className="font-semibold">{activity.activity_name}</p>
+                            <p className="text-gray-600">
+                              {activity.venue} - {new Date(activity.event_date).toLocaleDateString()}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                   <div className="flex gap-2">
