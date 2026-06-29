@@ -1,6 +1,7 @@
 const express = require("express");
 const axios = require("axios");
 const db = require("../config/db");
+const https = require("https");
 
 const router = express.Router();
 
@@ -132,6 +133,26 @@ router.get("/events/search", async (req, res) => {
     res.json(await attachActivities(events));
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/events/index", async (req, res) => {
+  try {
+    const event = req.body;
+    if (!event || !event.name) {
+      return res.status(400).json({ error: "Event payload is required" });
+    }
+
+    const response = await axios.post(
+      `${AI_SERVICE_URL}/index-event`,
+      event,
+      { timeout: 30000 }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("AI event indexing failed:", error.message);
+    res.status(502).json({ error: "AI indexing service is unavailable" });
   }
 });
 

@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const socketConfig = require("../config/socket");
 const EventActivity = require("../models/EventActivity");
+const axios = require("axios");
 
 const query = EventActivity.query;
 
@@ -48,6 +49,18 @@ const attachActivities = async (events) => {
     ...event,
     activities: activitiesByEvent[event.id] || []
   }));
+};
+
+const triggerAiIndexing = async (eventPayload, activities = []) => {
+  try {
+    await axios.post(
+      `${process.env.AI_SERVICE_URL || "http://localhost:8000"}/index-event`,
+      { ...eventPayload, activities },
+      { timeout: 15000 }
+    );
+  } catch (error) {
+    console.error("AI indexing failed:", error.message);
+  }
 };
 
 const sendNewEventNotification = (eventId, event) => {
@@ -162,6 +175,20 @@ exports.createEvent = async (req, res) => {
 
     await commit();
 
+    const persistedEvent = {
+      id: eventId,
+      name,
+      category,
+      date: eventDate,
+      description,
+      location,
+      link,
+      photo_url,
+      created_by: userId
+    };
+
+    await triggerAiIndexing(persistedEvent, activities);
+
     sendNewEventNotification(eventId, {
       name,
       category,
@@ -229,6 +256,18 @@ exports.updateEvent = async (req, res) => {
     }
 
     await commit();
+
+    await triggerAiIndexing({
+      id,
+      name,
+      category,
+      date: eventDate,
+      description,
+      location,
+      link,
+      photo_url,
+      created_by: userId
+    }, activities || []);
 
     res.json({ message: "Event updated successfully" });
   } catch (error) {
