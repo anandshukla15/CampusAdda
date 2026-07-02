@@ -74,6 +74,12 @@ export default function Nav() {
         </NavLink>
 
         {user && (
+          <NavLink to="/registered" className={activeClass}>
+            Registered Events
+          </NavLink>
+        )}
+
+        {user && (
           <NavLink to="/profile" className={activeClass}>
             <span className="inline-flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">

@@ -7,6 +7,7 @@ import PresidentDashboard from "./pages/PresidentDashboard";
 import EventDetails from "./pages/EventDetails";
 import Profile from "./pages/Profile";
 import SavedEvents from "./pages/SavedEvents";
+import RegisteredEvents from "./pages/RegisteredEvents";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Nav from "./components/Nav";
 import NotificationCenter from "./components/NotificationCenter";
@@ -48,6 +49,11 @@ function App() {
           <Route path="/saved" element={
             <ProtectedRoute>
               <SavedEvents />
+            </ProtectedRoute>
+          } />
+          <Route path="/registered" element={
+            <ProtectedRoute>
+              <RegisteredEvents />
             </ProtectedRoute>
           } />
           <Route path="/admin" element={

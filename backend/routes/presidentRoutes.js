@@ -11,6 +11,7 @@ const {
   getAllPresidents,
   removePresident
 } = require("../controllers/presidentApplicationController");
+const registrationController = require("../controllers/registrationController");
 
 // User applies for president
 router.post("/apply/:userId", auth, applyForPresident);
@@ -32,5 +33,8 @@ router.get("/all", auth, role("admin"), getAllPresidents);
 
 // Admin removes a president (demotes to user)
 router.put("/:userId/remove", auth, role("admin"), removePresident);
+
+router.get("/participants/:activityId", auth, registrationController.getActivityParticipants);
+router.get("/dashboard", auth, role("president"), registrationController.getPresidentSummary);
 
 module.exports = router;

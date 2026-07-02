@@ -39,9 +39,33 @@ const attachActivities = async (events) => {
     [eventIds]
   );
 
+  const activityIds = activities.map((activity) => activity.id);
+  const registrationCounts = activityIds.length
+    ? await query(
+        `SELECT activity_id, COUNT(*) AS total
+         FROM registrations
+         WHERE activity_id IN (?) AND status = 'registered'
+         GROUP BY activity_id`,
+        [activityIds]
+      )
+    : [];
+
+  const countsByActivity = registrationCounts.reduce((acc, row) => {
+    acc[row.activity_id] = Number(row.total || 0);
+    return acc;
+  }, {});
+
   const activitiesByEvent = activities.reduce((acc, activity) => {
     if (!acc[activity.event_id]) acc[activity.event_id] = [];
-    acc[activity.event_id].push(activity);
+    acc[activity.event_id].push({
+      ...activity,
+      registration_count: countsByActivity[activity.id] || 0,
+      remaining_seats:
+        activity.max_participants != null
+          ? Math.max(Number(activity.max_participants) - (countsByActivity[activity.id] || 0), 0)
+          : null,
+      registration_closed: !activity.registration_open
+    });
     return acc;
   }, {});
 

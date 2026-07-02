@@ -15,6 +15,8 @@ const eventRoutes = require("./routes/eventRoutes");
 const eventActivityRoutes = require("./routes/eventActivityRoutes");
 const userRoutes = require("./routes/userRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const registrationRoutes = require("./routes/registrationRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 
 require("./config/db");
@@ -43,6 +45,8 @@ app.use("/api/events", eventRoutes);
 app.use("/api/event-activities", eventActivityRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/registrations", registrationRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/ai", aiRoutes);
 
 app.get("/", (req, res) => {

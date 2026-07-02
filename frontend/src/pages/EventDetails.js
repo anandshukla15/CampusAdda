@@ -1,16 +1,50 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import API from "../services/api";
 import { getUser } from "../utils/decodeToken";
+import ToastStack from "../components/ui/ToastStack";
+
+const formatDate = (value) =>
+  value
+    ? new Date(value).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      })
+    : "Not specified";
 
 export default function EventDetails() {
   const { id } = useParams();
   const user = getUser();
   const [event, setEvent] = useState(null);
-  
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
+  const [myRegistrations, setMyRegistrations] = useState([]);
+  const [registeringActivityId, setRegisteringActivityId] = useState(null);
+  const [toasts, setToasts] = useState([]);
+
   const activities = event?.activities || [];
+
+  const registrationsByActivity = useMemo(() => {
+    return myRegistrations.reduce((acc, registration) => {
+      acc[registration.activity_id] = registration;
+      return acc;
+    }, {});
+  }, [myRegistrations]);
+
+  const pushToast = (title, message, variant = "info") => {
+    const toastId = `${Date.now()}-${Math.random()}`;
+    setToasts((prev) => [...prev, { id: toastId, title, message, variant }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((item) => item.id !== toastId));
+    }, 3000);
+  };
+
+  const refreshRegistrations = async () => {
+    if (!user?.id) return;
+    const response = await API.get("/registrations/my");
+    setMyRegistrations(response.data || []);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -23,15 +57,22 @@ export default function EventDetails() {
 
         if (user?.id) {
           try {
-            const r2 = await API.get("/events/saved/all");
-            const savedIds = r2.data?.map((e) => e.id) || [];
-            if (mounted) setIsSaved(savedIds.includes(parseInt(id)));
-          } catch (e) {
-            console.error("Failed to check saved status", e);
+            const savedResponse = await API.get("/events/saved/all");
+            const savedIds = savedResponse.data?.map((item) => item.id) || [];
+            if (mounted) setIsSaved(savedIds.includes(Number(id)));
+          } catch (error) {
+            console.error("Failed to check saved status", error);
+          }
+
+          try {
+            const registrationsResponse = await API.get("/registrations/my");
+            if (mounted) setMyRegistrations(registrationsResponse.data || []);
+          } catch (error) {
+            console.error("Failed to load registrations", error);
           }
         }
-      } catch (err) {
-        console.error("Failed to load event", err);
+      } catch (error) {
+        console.error("Failed to load event", error);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -44,19 +85,53 @@ export default function EventDetails() {
 
   const handleSaveToggle = async () => {
     if (!user?.id) {
-      alert("Please log in to save events");
+      pushToast("Login required", "Please log in to save events.", "error");
       return;
     }
 
     try {
       if (isSaved) {
         await API.delete(`/events/${id}/save`);
+        pushToast("Saved events", "Event removed from your saved list.", "success");
       } else {
         await API.post(`/events/${id}/save`);
+        pushToast("Saved events", "Event saved successfully.", "success");
       }
-      setIsSaved(!isSaved);
-    } catch (err) {
-      console.error("Failed to toggle save", err);
+      setIsSaved((prev) => !prev);
+    } catch (error) {
+      pushToast("Save failed", error?.response?.data?.error || "Unable to update saved events.", "error");
+    }
+  };
+
+  const handleRegister = async (activity) => {
+    if (!user?.id) {
+      pushToast("Login required", "Please log in to register for this activity.", "error");
+      return;
+    }
+
+    const existingRegistration = registrationsByActivity[activity.id];
+    if (existingRegistration?.status === "registered") {
+      pushToast("Already registered", "You have already registered for this activity.", "info");
+      return;
+    }
+
+    const closed = activity.registration_closed || activity.remaining_seats === 0;
+    if (closed) {
+      pushToast("Registration Closed", "This activity is no longer accepting registrations.", "error");
+      return;
+    }
+
+    try {
+      setRegisteringActivityId(activity.id);
+      const response = await API.post("/registrations", { activity_id: activity.id });
+      pushToast("Registration Successful", response.data?.message || "Your registration is confirmed.", "success");
+      const eventResponse = await API.get(`/events/${id}`);
+      await refreshRegistrations();
+      setEvent(eventResponse.data);
+    } catch (error) {
+      pushToast("Registration failed", error?.response?.data?.error || "Unable to register for this activity.", "error");
+    } finally {
+      setRegisteringActivityId(null);
     }
   };
 
@@ -69,141 +144,161 @@ export default function EventDetails() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="bg-white rounded shadow overflow-hidden">
-        {/* Event Image */}
-        {event.photo_url && (
-          <div className="h-96 bg-gray-300 overflow-hidden">
-            <img
-              src={event.photo_url}
-              alt={event.name}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.target.src = "https://via.placeholder.com/800x400?text=Event";
-              }}
-            />
-          </div>
-        )}
-        
+    <div className="mx-auto max-w-6xl px-4 py-6 lg:px-6">
+      <ToastStack toasts={toasts} />
 
-        {/* Event Details */}
-        <div className="p-8">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold mb-2">{event.name}</h1>
-              <div className="flex gap-3 flex-wrap mb-4">
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 font-semibold rounded capitalize">
-                  {event.category}
-                </span>
-                <span className="px-3 py-1 bg-gray-100 text-gray-800 font-semibold rounded">
-                   {event.creator_college_name}
-                </span>
+      <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
+        <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="relative min-h-[320px] bg-slate-950 text-white">
+            {event.photo_url ? (
+              <img
+                src={event.photo_url}
+                alt={event.name}
+                className="h-full w-full object-cover opacity-80"
+                onError={(e) => {
+                  e.target.src = "https://via.placeholder.com/800x400?text=Event";
+                }}
+              />
+            ) : null}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-6">
+              <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Campus Adda Fest</p>
+              <h1 className="mt-3 text-4xl font-semibold leading-tight lg:text-5xl">{event.name}</h1>
+              <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                <span className="rounded-full bg-cyan-400 px-3 py-1 font-semibold text-slate-950 capitalize">{event.category}</span>
+                <span className="rounded-full bg-white/10 px-3 py-1 font-medium text-white">{event.creator_college_name}</span>
               </div>
             </div>
-            {user?.id && (
-              <button
-                onClick={handleSaveToggle}
-                className={`px-6 py-3 rounded font-semibold ${
-                  isSaved
-                    ? "bg-green-600 text-white hover:bg-green-700"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
-                }`}
-              >
-                {isSaved ? "Saved" : "Save Event"}
-              </button>
-            )}
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 mb-8 pb-8 border-b">
-            <div>
-              <p className="text-gray-600 text-sm font-medium mb-1">LOCATION</p>
-              <p className="text-2xl font-semibold">
-                {event.location || event.creator_college_name || "Not specified"}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-gray-600 text-sm font-medium mb-1">ORGANIZER</p>
-              <p className="text-xl font-semibold">{event.created_by_name}</p>
-              {event.creator_role && (
-                <p className="text-gray-700 capitalize">Role: {event.creator_role}</p>
+          <div className="space-y-6 p-6 lg:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Organizer</p>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-900">{event.created_by_name}</h2>
+                <p className="text-sm text-slate-500">{event.creator_college_name}</p>
+              </div>
+              {user?.id && (
+                <button
+                  onClick={handleSaveToggle}
+                  className={`rounded-2xl px-5 py-3 text-sm font-semibold transition ${
+                    isSaved ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-slate-950 text-white hover:bg-slate-800"
+                  }`}
+                >
+                  {isSaved ? "Saved" : "Save Event"}
+                </button>
               )}
             </div>
-          </div>
 
-          {/* Description */}
-          {event.description && (
-            <div className="mb-8">
-              <h2 className="text-2xl font-semibold mb-4">About This Event</h2>
-              <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                {event.description}
-              </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Venue</p>
+                <p className="mt-2 text-lg font-semibold text-slate-900">{event.location || event.creator_college_name || "Not specified"}</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Event Date</p>
+                <p className="mt-2 text-lg font-semibold text-slate-900">{formatDate(event.date)}</p>
+              </div>
             </div>
-          )}
 
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">Activities</h2>
-            {activities.length === 0 ? (
-              <p className="text-gray-600">No activities have been added yet.</p>
-            ) : (
-              <div className="space-y-4">
-                {activities.map((activity) => (
-                  <div key={activity.id} className="border rounded-lg p-4 bg-gray-50">
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-900">{activity.activity_name}</h3>
-                        <p className="text-gray-700 mt-2 whitespace-pre-wrap">{activity.activity_description}</p>
-                      </div>
-                      {activity.registration_link && (
-                        <a
-                          href={activity.registration_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-semibold text-center"
-                        >
-                          Register
-                        </a>
-                      )}
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-3 mt-4 text-sm text-gray-700">
-                      <p><strong>Venue:</strong> {activity.venue}</p>
-                      <p><strong>Date:</strong> {new Date(activity.event_date).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric"
-                      })}</p>
-                      <p><strong>Time:</strong> {activity.start_time ? activity.start_time.slice(0, 5) : "Not specified"}</p>
-                      {activity.max_participants && (
-                        <p><strong>Max Participants:</strong> {activity.max_participants}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
+            {event.description && (
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">About</p>
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-600">{event.description}</p>
               </div>
             )}
-          </div>
 
-          {/* Event Link */}
-          {event.link && (
-            <div className="mb-8">
-              <h2 className="text-2xl font-semibold mb-4">Event Link</h2>
+            {event.link && (
               <a
                 href={event.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
+                className="inline-flex rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
               >
                 Visit Event Website →
               </a>
+            )}
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 p-6 lg:p-8">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">Activities</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">Register for a session</h2>
+            </div>
+            <p className="text-sm text-slate-500">{activities.length} activities</p>
+          </div>
+
+          {activities.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-slate-500">No activities have been added yet.</p>
+          ) : (
+            <div className="grid gap-5 lg:grid-cols-2">
+              {activities.map((activity) => {
+                const existingRegistration = registrationsByActivity[activity.id];
+                const isRegistered = existingRegistration?.status === "registered";
+                const closed = activity.registration_closed || activity.remaining_seats === 0;
+
+                return (
+                  <article key={activity.id} className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-xl font-semibold text-slate-900">{activity.activity_name}</h3>
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{activity.activity_description}</p>
+                      </div>
+                      {isRegistered ? (
+                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">✓ Registered</span>
+                      ) : closed ? (
+                        <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">Registration Closed</span>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-5 grid gap-3 text-sm text-slate-600 sm:grid-cols-2">
+                      <p><strong className="text-slate-900">Venue:</strong> {activity.venue}</p>
+                      <p><strong className="text-slate-900">Date:</strong> {activity.event_date_label || formatDate(activity.event_date)}</p>
+                      <p><strong className="text-slate-900">Time:</strong> {activity.start_time ? activity.start_time.slice(0, 5) : "Not specified"}</p>
+                      <p><strong className="text-slate-900">Available Seats:</strong> {activity.max_participants ?? "Unlimited"}</p>
+                      <p><strong className="text-slate-900">Remaining Seats:</strong> {activity.remaining_seats ?? "Unlimited"}</p>
+                      <p><strong className="text-slate-900">Registered:</strong> {activity.registration_count || 0}</p>
+                    </div>
+
+                    {isRegistered && existingRegistration && (
+                      <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800">
+                        <p className="font-semibold">Registration ID: {existingRegistration.registration_id}</p>
+                        <p className="mt-1">Status: {existingRegistration.status}</p>
+                        <p>Payment Status: {existingRegistration.payment_status}</p>
+                      </div>
+                    )}
+
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        disabled={registeringActivityId === activity.id || isRegistered || closed}
+                        onClick={() => handleRegister(activity)}
+                        className={`rounded-2xl px-5 py-3 text-sm font-semibold transition ${
+                          isRegistered || closed
+                            ? "cursor-not-allowed bg-slate-300 text-slate-500"
+                            : "bg-slate-950 text-white hover:bg-slate-800"
+                        }`}
+                      >
+                        {isRegistered
+                          ? "Already Registered"
+                          : registeringActivityId === activity.id
+                            ? "Registering..."
+                            : closed
+                              ? "Registration Closed"
+                              : "Register Now"}
+                      </button>
+
+                      <span className="rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-600">
+                        {activity.registration_open ? "Open for registration" : "Closed by organizer"}
+                      </span>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
-
-          {/* Contact */}
-          <div className="bg-gray-50 p-6 rounded">
-            <h2 className="text-xl font-semibold mb-2">Contact Organizer</h2>
-            <p className="text-gray-700">Email: {event.creator_email}</p>
-          </div>
         </div>
       </div>
     </div>

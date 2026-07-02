@@ -95,3 +95,32 @@ exports.deleteActivity = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.updateRegistrationStatus = async (req, res) => {
+  try {
+    const rows = await EventActivity.findById(req.params.id);
+    if (!rows.length) {
+      return res.status(404).json({ error: "Activity not found" });
+    }
+
+    if (!canManageEvent(rows[0], req.user)) {
+      return res.status(403).json({ error: "You can only manage activities for your own events" });
+    }
+
+    const registration_open = req.body.registration_open;
+    if (registration_open === undefined || registration_open === null) {
+      return res.status(400).json({ error: "registration_open is required" });
+    }
+
+    await EventActivity.query(
+      "UPDATE event_activities SET registration_open = ? WHERE id = ?",
+      [registration_open ? 1 : 0, req.params.id]
+    );
+
+    res.json({
+      message: registration_open ? "Registrations reopened" : "Registrations closed"
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ error: error.message });
+  }
+};
