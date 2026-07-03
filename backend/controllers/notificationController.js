@@ -10,7 +10,13 @@ exports.getNotifications = async (req, res) => {
       "SELECT * FROM notifications WHERE (recipient_user_id = ? OR recipient_role = 'all' OR recipient_role = ?) ORDER BY created_at DESC",
       [userId, role],
       (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+          if (err.code === "ER_NO_SUCH_TABLE") {
+            return res.json([]);
+          }
+
+          return res.status(500).json({ error: err.message });
+        }
         res.json(result);
       }
     );
@@ -30,7 +36,13 @@ exports.markAsRead = async (req, res) => {
       "SELECT * FROM notifications WHERE id = ?",
       [id],
       (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+          if (err.code === "ER_NO_SUCH_TABLE") {
+            return res.status(404).json({ error: "Notification not found" });
+          }
+
+          return res.status(500).json({ error: err.message });
+        }
         if (!result || result.length === 0) return res.status(404).json({ error: "Notification not found" });
 
         const notif = result[0];

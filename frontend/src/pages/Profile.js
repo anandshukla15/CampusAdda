@@ -39,17 +39,26 @@ export default function Profile() {
 
     const load = async () => {
       try {
-        const [profileResponse, savedResponse, registrationsResponse, notificationsResponse] = await Promise.all([
+        const [profileResponse, savedResponse, registrationsResponse] = await Promise.all([
           API.get("/users/profile"),
           API.get("/events/saved/all"),
-          API.get("/registrations/my"),
-          API.get("/notifications")
+          API.get("/registrations/my")
         ]);
 
         setProfile(profileResponse.data || null);
         setSavedEvents(savedResponse.data || []);
         setRegistrations(registrationsResponse.data || []);
-        setNotifications(notificationsResponse.data || []);
+
+        try {
+          const notificationsResponse = await API.get("/notifications");
+          setNotifications(notificationsResponse.data || []);
+        } catch (notificationError) {
+          if (notificationError?.response?.status === 404 || notificationError?.response?.data?.error === "Table 'college_platform.notifications' doesn't exist") {
+            setNotifications([]);
+          } else {
+            pushToast("Notifications unavailable", notificationError?.response?.data?.error || "Unable to load notifications.", "error");
+          }
+        }
       } catch (error) {
         pushToast("Load failed", error?.response?.data?.error || "Unable to load your dashboard.", "error");
       } finally {
