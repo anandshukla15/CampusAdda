@@ -7,6 +7,8 @@ import API from "../services/api";
 export default function Nav() {
   const navigate = useNavigate();
   const user = getUser();
+  const userId = user?.id;
+  const userRole = user?.role;
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -23,8 +25,8 @@ export default function Nav() {
 
   useEffect(() => {
     // register socket with server so it can join user and role rooms
-    if (user && socket) {
-      socket.emit('register', { userId: user.id, role: user.role });
+    if (userId && socket) {
+      socket.emit('register', { userId, role: userRole });
 
       socket.on('notification', (payload) => {
         // prepend notification
@@ -35,7 +37,7 @@ export default function Nav() {
 
     // fetch existing notifications
     const fetchNotifications = async () => {
-      if (!user) return;
+      if (!userId) return;
       try {
         const res = await API.get('/notifications');
         setNotifications(res.data || []);
@@ -53,7 +55,7 @@ export default function Nav() {
         socket.off('notification');
       }
     };
-  }, [user]);
+  }, [userId, userRole]);
 
   return (
     <nav className="bg-white shadow px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-3">

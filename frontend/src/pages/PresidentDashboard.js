@@ -38,6 +38,8 @@ const formatActivityForForm = (activity) => ({
 
 export default function PresidentDashboard() {
   const user = getUser();
+  const userId = user?.id;
+  const userRole = user?.role;
   const navigate = useNavigate();
   const [applicationStatus, setApplicationStatus] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -99,13 +101,13 @@ export default function PresidentDashboard() {
   }, []);
 
   useEffect(() => {
-    if (!user?.id) {
+    if (!userId) {
       navigate("/login");
       return;
     }
 
-    if (user.role !== "president") {
-      API.get(`/president/status/${user.id}`)
+    if (userRole !== "president") {
+      API.get(`/president/status/${userId}`)
         .then((response) => setApplicationStatus(response.data))
         .catch((error) => console.error(error))
         .finally(() => setLoading(false));
@@ -114,12 +116,12 @@ export default function PresidentDashboard() {
 
     fetchDashboard();
     fetchNotifications();
-  }, [user, navigate, fetchDashboard, fetchNotifications]);
+  }, [userId, userRole, navigate, fetchDashboard, fetchNotifications]);
 
   useEffect(() => {
-    if (user?.role !== "president") return;
+    if (userRole !== "president") return;
     fetchParticipants(selectedActivityId);
-  }, [selectedActivityId, user?.role, fetchParticipants]);
+  }, [selectedActivityId, userRole, fetchParticipants]);
 
   useEffect(() => {
     const handleNotification = (payload) => {
@@ -233,7 +235,7 @@ export default function PresidentDashboard() {
     }
   }, [editingEvent]);
 
-  if (user?.role !== "president") {
+  if (userRole !== "president") {
     if (loading) return <div className="p-6 text-center">Loading...</div>;
 
     return (
@@ -267,7 +269,7 @@ export default function PresidentDashboard() {
         {applicationStatus?.status === "no_application" && (
           <PresidentApplicationForm
             onSuccess={() => {
-              API.get(`/president/status/${user.id}`).then((response) => setApplicationStatus(response.data));
+              API.get(`/president/status/${userId}`).then((response) => setApplicationStatus(response.data));
             }}
           />
         )}
