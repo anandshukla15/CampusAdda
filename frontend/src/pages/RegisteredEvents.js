@@ -224,7 +224,7 @@ export default function RegisteredEvents() {
                         onClick={() => setCancelTarget(registration)}
                         className="rounded-2xl border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-50"
                       >
-                        Cancel Registration
+                        ALL THE BEST
                       </button>
                     ) : (
                       <span className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm text-slate-500">{registration.status}</span>
