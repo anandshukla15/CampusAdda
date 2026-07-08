@@ -75,7 +75,7 @@ export default function Nav() {
           Saved
         </NavLink>
 
-        {user && (
+        {user && user.role === "user" && (
           <NavLink to="/registered" className={activeClass}>
             Registered Events
           </NavLink>

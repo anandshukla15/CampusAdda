@@ -267,21 +267,29 @@ const createRegistration = async ({ userId, activityId }) => {
       start_time_label: formatTimeLabel(activity.start_time)
     };
 
-    await insertNotification({
-      recipientUserId: userId,
-      recipientRole: null,
-      type: "registration_success",
-      message: "Registration Successful",
-      data: { activityId, registrationId }
-    });
-
-    await insertNotification({
-      recipientUserId: activity.created_by,
-      recipientRole: null,
-      type: "participant_registered",
-      message: "A new student registered for your activity.",
-      data: { activityId, registrationId, userId }
-    });
+    await Promise.all([
+      insertNotification({
+        recipientUserId: userId,
+        recipientRole: null,
+        type: "registration_success",
+        message: "Registration Successful",
+        data: { activityId, registrationId }
+      }),
+      insertNotification({
+        recipientUserId: activity.created_by,
+        recipientRole: null,
+        type: "participant_registered",
+        message: "A new student registered for your activity.",
+        data: { activityId, registrationId, userId }
+      }),
+      insertNotification({
+        recipientUserId: null,
+        recipientRole: "admin",
+        type: "participant_registered",
+        message: "A new student registered for an activity.",
+        data: { activityId, registrationId, userId, eventOwnerId: activity.created_by }
+      })
+    ]);
 
     await commit();
 
@@ -300,6 +308,15 @@ const createRegistration = async ({ userId, activityId }) => {
         type: "participant_registered",
         message: "A new student registered for your activity.",
         data: { activityId, registrationId, userId }
+      }
+    );
+
+    emitNotification(
+      { type: "role", role: "admin" },
+      {
+        type: "participant_registered",
+        message: "A new student registered for an activity.",
+        data: { activityId, registrationId, userId, eventOwnerId: activity.created_by }
       }
     );
 

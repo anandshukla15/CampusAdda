@@ -52,7 +52,7 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/registered" element={
-            <ProtectedRoute>
+            <ProtectedRoute role="user">
               <RegisteredEvents />
             </ProtectedRoute>
           } />

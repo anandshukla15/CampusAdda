@@ -9,10 +9,12 @@ const sidebarItems = [
   { key: "dashboard", label: "Dashboard" },
   { key: "profile", label: "Profile" },
   { key: "saved", label: "Saved Events" },
-  { key: "registered", label: "Registered Events" },
   { key: "notifications", label: "Notifications" },
   { key: "settings", label: "Settings" }
 ];
+
+const getSidebarItems = (role) =>
+  role === "user" ? sidebarItems : sidebarItems.filter((item) => item.key !== "registered");
 
 export default function Profile() {
   const user = getUser();
@@ -89,7 +91,7 @@ export default function Profile() {
         <DashboardSidebar
           title={profile?.name || "My Dashboard"}
           subtitle={profile?.college_name || profile?.role || "Campus Adda"}
-          items={sidebarItems}
+          items={getSidebarItems(user?.role)}
           activeKey={activeSection}
           onSelect={(key) => {
             if (key === "saved") return navigate("/saved");
