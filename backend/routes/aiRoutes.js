@@ -57,7 +57,7 @@ router.post("/chat", async (req, res) => {
 
   try {
     const response = await axios.post(
-      `${AI_SERVICE_URL}/chat`,
+      `${AI_SERVICE_URL}/langgraph/chat`,
       { query: query.trim() },
       { timeout: 30000 }
     );

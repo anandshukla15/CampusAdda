@@ -2,15 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from agent import ask_llm
-from prompts.system_prompt import SYSTEM_PROMPT
 from rag_service import EventRAGService
-from graph_service import EventGraphService
-from tools.event_tools import find_events
+from langgraph_chatbot.service import LangGraphChatbotService
 
 app = FastAPI()
 rags = EventRAGService()
-graph = EventGraphService(rags)
+langgraph_chatbot = LangGraphChatbotService(rags)
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,54 +31,16 @@ async def index_event(payload: dict):
     rags.index_event(event, activities=activities)
     return {"status": "indexed", "event_id": event.get("id") or event.get("name")}
 
+
+def _run_chatbot(query: str):
+    return langgraph_chatbot.invoke(query)
+
+
 @app.post("/chat")
 async def chat(data: ChatRequest):
-    query = data.query.strip()
-    events = find_events(query)
-    if not isinstance(events, list):
-        events = []
+    return _run_chatbot(data.query.strip())
 
-    if events:
-        for event in events:
-            try:
-                if isinstance(event, dict):
-                    rags.index_event(event, activities=event.get("activities", []))
-            except Exception:
-                continue
 
-    graph_result = graph.execute(query)
-    context = graph_result.get("context", "No relevant events found.")
-
-    prompt = f"""
-    {SYSTEM_PROMPT}
-
-    User Query:
-    {query}
-
-    Intent:
-    {graph_result.get('intent', 'general')}
-
-    Route:
-    {graph_result.get('route', 'response')}
-
-    Matching Events:
-    {events}
-
-    Retrieval Context:
-    {context}
-
-    Answer user naturally and keep it concise.
-    """
-
-    answer = ask_llm(prompt)
-
-    if not answer or answer.startswith("Gemini is not configured"):
-        answer = graph_result.get("answer", "I could not find a matching event right now.")
-
-    return {
-        "answer": answer,
-        "events": events,
-        "intent": graph_result.get("intent"),
-        "route": graph_result.get("route"),
-        "retrieval_context": context,
-    }
+@app.post("/langgraph/chat")
+async def langgraph_chat(data: ChatRequest):
+    return _run_chatbot(data.query.strip())
