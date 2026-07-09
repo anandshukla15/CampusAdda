@@ -87,7 +87,11 @@ const triggerAiIndexing = async (eventPayload, activities = []) => {
   }
 };
 
-const sendNewEventNotification = (eventId, event) => {
+const sendNewEventNotification = (eventId, event, creatorRole) => {
+  if (creatorRole !== "president") {
+    return;
+  }
+
   const message = `New event added: ${event.name}`;
   const data = JSON.stringify({
     eventId,
@@ -218,7 +222,7 @@ exports.createEvent = async (req, res) => {
       category,
       date: eventDate,
       created_by: userId
-    });
+    }, req.user.role);
 
     res.status(201).json({
       message: "Event created successfully",

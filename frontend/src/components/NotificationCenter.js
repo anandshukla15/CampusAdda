@@ -10,7 +10,6 @@ export default function NotificationCenter() {
       const notification = { id, ...data };
       setNotifications((prev) => [...prev, notification]);
 
-      // Auto remove notification after 6 seconds
       setTimeout(() => {
         setNotifications((prev) => prev.filter((n) => n.id !== id));
       }, 6000);
@@ -31,6 +30,8 @@ export default function NotificationCenter() {
         return "bg-red-500 border-l-4 border-red-700 text-white";
       case "president_application":
         return "bg-blue-500 border-l-4 border-blue-700 text-white";
+      case "new_event":
+        return "bg-cyan-600 border-l-4 border-cyan-800 text-white";
       default:
         return "bg-gray-500 border-l-4 border-gray-700 text-white";
     }
@@ -44,6 +45,8 @@ export default function NotificationCenter() {
         return "President Role Removed";
       case "president_application":
         return "New President Application";
+      case "new_event":
+        return "New Event Added";
       default:
         return "Notification";
     }
@@ -57,6 +60,8 @@ export default function NotificationCenter() {
         return "✕";
       case "president_application":
         return "ℹ";
+      case "new_event":
+        return "★";
       default:
         return "●";
     }
@@ -70,6 +75,7 @@ export default function NotificationCenter() {
           className={`p-4 rounded shadow-lg animate-fadeIn ${getNotificationStyles(
             notif.type
           )}`}
+          onClick={() => setNotifications((prev) => prev.filter((n) => n.id !== notif.id))}
         >
           <div className="flex items-start gap-3">
             <span className="text-xl font-bold flex-shrink-0">{getNotificationIcon(notif.type)}</span>

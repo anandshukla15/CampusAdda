@@ -86,6 +86,15 @@ export default function PresidentDashboard() {
     }
   }, []);
 
+  const dismissNotification = async (notificationId) => {
+    try {
+      await API.post(`/notifications/mark-read/${notificationId}`);
+      setNotifications((prev) => prev.filter((notification) => notification.id !== notificationId));
+    } catch (error) {
+      pushToast("Dismiss failed", error?.response?.data?.error || "Unable to dismiss the notification.", "error");
+    }
+  };
+
   const fetchParticipants = useCallback(async (activityId) => {
     if (!activityId) {
       setParticipants([]);
@@ -125,6 +134,11 @@ export default function PresidentDashboard() {
 
   useEffect(() => {
     const handleNotification = (payload) => {
+      if (payload?.type === "new_event") {
+        pushToast("New event added", payload.message || "A new event was created.", "info");
+        fetchNotifications();
+      }
+
       if (payload?.type === "participant_registered") {
         pushToast("New registration", payload.message || "A new student registered for your activity.", "success");
         fetchDashboard();
@@ -497,7 +511,11 @@ export default function PresidentDashboard() {
                 {notifications.length === 0 ? (
                   <p className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">No notifications yet.</p>
                 ) : notifications.map((notification) => (
-                  <div key={notification.id} className={`rounded-2xl border p-4 ${notification.is_read ? "border-slate-200 bg-white" : "border-cyan-200 bg-cyan-50"}`}>
+                  <div
+                    key={notification.id}
+                    onClick={() => dismissNotification(notification.id)}
+                    className={`cursor-pointer rounded-2xl border p-4 ${notification.is_read ? "border-slate-200 bg-white" : "border-cyan-200 bg-cyan-50 hover:bg-cyan-100"}`}
+                  >
                     <p className="font-semibold text-slate-950">{notification.message}</p>
                     <p className="mt-1 text-sm text-slate-500">{new Date(notification.created_at).toLocaleString()}</p>
                   </div>

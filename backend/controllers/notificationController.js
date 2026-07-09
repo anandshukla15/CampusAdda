@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const NOTIFICATION_TTL_HOURS = 24;
 
 // Get notifications relevant to the logged in user
 exports.getNotifications = async (req, res) => {
@@ -7,7 +8,17 @@ exports.getNotifications = async (req, res) => {
 
   try {
     db.query(
-      "SELECT * FROM notifications WHERE (recipient_user_id = ? OR recipient_role = 'all' OR recipient_role = ?) ORDER BY created_at DESC",
+      `DELETE FROM notifications
+       WHERE created_at < DATE_SUB(NOW(), INTERVAL ${NOTIFICATION_TTL_HOURS} HOUR)`,
+      (cleanupErr) => {
+        if (cleanupErr) {
+          console.error("Failed to clean expired notifications:", cleanupErr.message);
+        }
+      }
+    );
+
+    db.query(
+      "SELECT * FROM notifications WHERE is_read = 0 AND (recipient_user_id = ? OR recipient_role = 'all' OR recipient_role = ?) ORDER BY created_at DESC",
       [userId, role],
       (err, result) => {
         if (err) {
@@ -25,13 +36,13 @@ exports.getNotifications = async (req, res) => {
   }
 };
 
-// Mark notification as read
+// Mark notification as read and remove it from the visible list
 exports.markAsRead = async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
+  const role = req.user.role;
 
   try {
-    // Only allow marking if the notification belongs to the user or is for their role/all
     db.query(
       "SELECT * FROM notifications WHERE id = ?",
       [id],
@@ -50,12 +61,16 @@ exports.markAsRead = async (req, res) => {
           return res.status(403).json({ error: "Not authorized to mark this notification" });
         }
 
+        if (notif.recipient_role && notif.recipient_role !== "all" && notif.recipient_role !== role) {
+          return res.status(403).json({ error: "Not authorized to mark this notification" });
+        }
+
         db.query(
-          "UPDATE notifications SET is_read = 1 WHERE id = ?",
+          "DELETE FROM notifications WHERE id = ?",
           [id],
           (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ message: "Notification marked as read" });
+            res.json({ message: "Notification dismissed" });
           }
         );
       }

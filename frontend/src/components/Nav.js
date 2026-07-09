@@ -13,6 +13,16 @@ export default function Nav() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
 
+  const dismissNotification = async (notificationId) => {
+    try {
+      await API.post(`/notifications/mark-read/${notificationId}`);
+      setNotifications((prev) => prev.filter((notification) => notification.id !== notificationId));
+      setUnreadCount((count) => Math.max(count - 1, 0));
+    } catch (err) {
+      console.error("Failed to dismiss notification", err);
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     navigate("/login");
@@ -28,10 +38,8 @@ export default function Nav() {
     if (userId && socket) {
       socket.emit('register', { userId, role: userRole });
 
-      socket.on('notification', (payload) => {
-        // prepend notification
-        setNotifications((prev) => [payload, ...prev]);
-        setUnreadCount((c) => c + 1);
+      socket.on('notification', () => {
+        fetchNotifications();
       });
     }
 
@@ -136,7 +144,11 @@ export default function Nav() {
                       <div className="text-sm text-gray-600">No notifications</div>
                     ) : (
                       notifications.map((n) => (
-                        <div key={n.id} className={`p-2 border-b ${n.is_read ? 'bg-white' : 'bg-gray-50'}`}>
+                        <div
+                          key={n.id}
+                          onClick={() => dismissNotification(n.id)}
+                          className={`cursor-pointer p-2 border-b ${n.is_read ? 'bg-white' : 'bg-gray-50 hover:bg-slate-100'}`}
+                        >
                           <div className="text-sm font-medium">{n.type}</div>
                           <div className="text-sm text-gray-700">{n.message}</div>
                           <div className="text-xs text-gray-400">{new Date(n.created_at).toLocaleString()}</div>

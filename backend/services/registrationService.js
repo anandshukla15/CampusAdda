@@ -1,5 +1,4 @@
 const db = require("../config/db");
-const socketConfig = require("../config/socket");
 const { sendRegistrationConfirmation } = require("./emailService");
 
 const query = (sql, params = []) =>
@@ -174,29 +173,6 @@ const getPresidentSummary = async (presidentId) => {
   };
 };
 
-const insertNotification = async ({ recipientUserId, recipientRole, type, message, data }) => {
-  await query(
-    `INSERT INTO notifications (recipient_user_id, recipient_role, type, message, data)
-     VALUES (?, ?, ?, ?, ?)`,
-    [recipientUserId || null, recipientRole || "all", type, message, JSON.stringify(data || {})]
-  );
-};
-
-const emitNotification = (target, payload) => {
-  try {
-    const io = socketConfig.getIO();
-    if (target.type === "user" && target.id) {
-      io.to(`user_${target.id}`).emit("notification", payload);
-    } else if (target.type === "role" && target.role) {
-      io.to(`role_${target.role}`).emit("notification", payload);
-    } else {
-      io.emit("notification", payload);
-    }
-  } catch (error) {
-    console.error("Socket notification error:", error.message);
-  }
-};
-
 const canManageActivity = (user, activity) => {
   if (!user || !activity) return false;
   return user.role === "admin" || (user.role === "president" && Number(activity.created_by) === Number(user.id));
@@ -267,58 +243,7 @@ const createRegistration = async ({ userId, activityId }) => {
       start_time_label: formatTimeLabel(activity.start_time)
     };
 
-    await Promise.all([
-      insertNotification({
-        recipientUserId: userId,
-        recipientRole: null,
-        type: "registration_success",
-        message: "Registration Successful",
-        data: { activityId, registrationId }
-      }),
-      insertNotification({
-        recipientUserId: activity.created_by,
-        recipientRole: null,
-        type: "participant_registered",
-        message: "A new student registered for your activity.",
-        data: { activityId, registrationId, userId }
-      }),
-      insertNotification({
-        recipientUserId: null,
-        recipientRole: "admin",
-        type: "participant_registered",
-        message: "A new student registered for an activity.",
-        data: { activityId, registrationId, userId, eventOwnerId: activity.created_by }
-      })
-    ]);
-
     await commit();
-
-    emitNotification(
-      { type: "user", id: userId },
-      {
-        type: "registration_success",
-        message: "Registration Successful",
-        data: { activityId, registrationId }
-      }
-    );
-
-    emitNotification(
-      { type: "user", id: activity.created_by },
-      {
-        type: "participant_registered",
-        message: "A new student registered for your activity.",
-        data: { activityId, registrationId, userId }
-      }
-    );
-
-    emitNotification(
-      { type: "role", role: "admin" },
-      {
-        type: "participant_registered",
-        message: "A new student registered for an activity.",
-        data: { activityId, registrationId, userId, eventOwnerId: activity.created_by }
-      }
-    );
 
     try {
       await sendRegistrationConfirmation({
@@ -424,15 +349,6 @@ const cancelRegistration = async ({ registrationId, user }) => {
     );
 
     await commit();
-
-    emitNotification(
-      { type: "user", id: registration.user_id },
-      {
-        type: "registration_cancelled",
-        message: "Registration cancelled",
-        data: { registrationId: registration.registration_id }
-      }
-    );
 
     return { message: "Registration cancelled successfully" };
   } catch (error) {
