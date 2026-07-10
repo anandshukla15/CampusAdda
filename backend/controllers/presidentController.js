@@ -3,7 +3,7 @@ const db = require("../config/db");
 exports.applyPresident = (req, res) => {
   const userId = req.user.id;
   const { name, roll_no, college_name } = req.body;
-  const document_url = req.file ? req.file.path : req.body.document_url || null;
+  const document_url = req.file ? (req.file.secure_url || req.file.path) : req.body.document_url || null;
 
   if (!name || !roll_no || !college_name) {
     return res.status(400).json({ error: "name, roll_no and college_name are required" });

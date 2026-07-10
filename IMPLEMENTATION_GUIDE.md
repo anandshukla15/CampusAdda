@@ -40,6 +40,10 @@ DB_PASSWORD=your_db_password
 DB_NAME=college_platform
 ADMIN_USERNAME=aks
 ADMIN_PASSWORD=Shukla15@gmail.com
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+CLOUDINARY_FOLDER=campusadda/documents
 ```
 
 ### Frontend (.env or config)
@@ -105,6 +109,11 @@ npm start
 - **Events Tab**:
   - View all events
   - Delete inappropriate events
+
+### Cloudinary Document Uploads
+- President applicant PDFs are uploaded to Cloudinary instead of being stored in the local `uploads/` folder.
+- Multer reads the file into memory, Cloudinary stores it, and the returned secure URL is saved in `president_applications.document_url`.
+- This keeps file storage outside the backend server and avoids managing uploaded files manually.
 
 ## API Endpoints
 

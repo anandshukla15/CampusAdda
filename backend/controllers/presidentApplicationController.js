@@ -18,7 +18,7 @@ exports.applyForPresident = async (req, res) => {
           return res.status(400).json({ error: "You already have a pending application" });
         }
 
-        // Check if user already president
+        
         db.query(
           "SELECT role FROM users WHERE id = ?",
           [userId],

@@ -5,7 +5,7 @@ const jwt=require("jsonwebtoken");
 exports.register = async (req, res) => {
   const { name, email, password, role = "user", college_name, roll_no } = req.body;
   const document_url = req.file
-    ? `${req.protocol}://${req.get("host")}/${req.file.path.replace(/\\/g, "/")}`
+    ? req.file.secure_url || req.file.path
     : null;
   
   // Validate role
