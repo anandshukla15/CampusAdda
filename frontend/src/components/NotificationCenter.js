@@ -25,15 +25,15 @@ export default function NotificationCenter() {
   const getNotificationStyles = (type) => {
     switch (type) {
       case "president_approved":
-        return "bg-green-500 border-l-4 border-green-700 text-white";
+        return "border-emerald-200 bg-emerald-50 text-emerald-950 shadow-emerald-900/10";
       case "president_removed":
-        return "bg-red-500 border-l-4 border-red-700 text-white";
+        return "border-rose-200 bg-rose-50 text-rose-950 shadow-rose-900/10";
       case "president_application":
-        return "bg-blue-500 border-l-4 border-blue-700 text-white";
+        return "border-sky-200 bg-sky-50 text-sky-950 shadow-sky-900/10";
       case "new_event":
-        return "bg-cyan-600 border-l-4 border-cyan-800 text-white";
+        return "border-cyan-200 bg-cyan-50 text-cyan-950 shadow-cyan-900/10";
       default:
-        return "bg-gray-500 border-l-4 border-gray-700 text-white";
+        return "border-slate-200 bg-white text-slate-900 shadow-slate-900/10";
     }
   };
 
@@ -59,29 +59,32 @@ export default function NotificationCenter() {
       case "president_removed":
         return "✕";
       case "president_application":
-        return "ℹ";
+        return "i";
       case "new_event":
         return "★";
       default:
-        return "●";
+        return "•";
     }
   };
 
   return (
-    <div className="fixed top-4 right-4 space-y-2 z-50 w-96 max-w-full px-4">
+    <div className="fixed right-4 top-4 z-[80] flex w-[calc(100vw-2rem)] max-w-sm flex-col gap-3 sm:w-96">
       {notifications.map((notif) => (
         <div
           key={notif.id}
-          className={`p-4 rounded shadow-lg animate-fadeIn ${getNotificationStyles(
-            notif.type
-          )}`}
+          className={`cursor-pointer overflow-hidden rounded-3xl border px-4 py-4 shadow-2xl backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 hover:shadow-3xl ${getNotificationStyles(notif.type)}`}
           onClick={() => setNotifications((prev) => prev.filter((n) => n.id !== notif.id))}
         >
           <div className="flex items-start gap-3">
-            <span className="text-xl font-bold flex-shrink-0">{getNotificationIcon(notif.type)}</span>
+            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-white/80 text-lg font-bold ring-1 ring-black/5">
+              {getNotificationIcon(notif.type)}
+            </span>
             <div className="flex-1">
-              <p className="font-semibold">{getNotificationTitle(notif.type)}</p>
-              <p className="text-sm mt-1 opacity-90">{notif.message}</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold sm:text-base">{getNotificationTitle(notif.type)}</p>
+                <span className="rounded-full bg-white/70 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-slate-500">New</span>
+              </div>
+              <p className="mt-1 text-sm leading-6 text-current/80">{notif.message}</p>
             </div>
           </div>
         </div>

@@ -12,6 +12,7 @@ export default function Nav() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const dismissNotification = async (notificationId) => {
     try {
@@ -30,8 +31,8 @@ export default function Nav() {
 
   const activeClass = ({ isActive }) =>
     isActive
-      ? "text-green-600 font-semibold"
-      : "text-gray-700 hover:text-gray-900";
+      ? "text-cyan-700 font-semibold"
+      : "text-slate-600 hover:text-slate-950";
 
   useEffect(() => {
     // register socket with server so it can join user and role rooms
@@ -66,10 +67,24 @@ export default function Nav() {
   }, [userId, userRole]);
 
   return (
-    <nav className="bg-white shadow px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
-      <div className="text-xl font-bold">Campus Adda</div>
+    <nav className="sticky top-0 z-[70] border-b border-slate-200/80 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-xl sm:px-6">
+      <div className="mx-auto flex max-w-7xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xl font-bold tracking-tight text-slate-950">Campus Adda</div>
+            <p className="text-xs text-slate-500">Discover, register, and manage campus events</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-3 py-2 text-slate-700 md:hidden"
+            aria-label="Toggle navigation menu"
+          >
+            ☰
+          </button>
+        </div>
 
-      <div className="flex flex-wrap items-center gap-4">
+        <div className={`flex flex-col gap-3 md:flex md:flex-row md:flex-wrap md:items-center md:gap-4 ${menuOpen ? "flex" : "hidden md:flex"}`}>
         <NavLink to="/" className={activeClass}>
           <span className="inline-flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -126,8 +141,8 @@ export default function Nav() {
         )}
 
         {user && (
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-3">
+            <div className="relative self-start md:self-auto">
               <button onClick={() => setOpen(!open)} className="relative">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -138,20 +153,29 @@ export default function Nav() {
               </button>
 
               {open && (
-                <div className="absolute right-0 mt-2 w-80 bg-white border rounded shadow-lg z-50">
-                  <div className="p-2 max-h-64 overflow-auto">
+                <div className="absolute right-0 z-50 mt-3 w-[92vw] max-w-sm overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
+                  <div className="border-b border-slate-100 px-4 py-3">
+                    <p className="text-sm font-semibold text-slate-950">Notifications</p>
+                    <p className="text-xs text-slate-500">Recent updates and reminders</p>
+                  </div>
+                  <div className="max-h-80 overflow-auto p-2">
                     {notifications.length === 0 ? (
-                      <div className="text-sm text-gray-600">No notifications</div>
+                      <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">No notifications</div>
                     ) : (
                       notifications.map((n) => (
                         <div
                           key={n.id}
                           onClick={() => dismissNotification(n.id)}
-                          className={`cursor-pointer p-2 border-b ${n.is_read ? 'bg-white' : 'bg-gray-50 hover:bg-slate-100'}`}
+                          className={`cursor-pointer rounded-2xl border px-3 py-3 transition ${n.is_read ? 'border-transparent bg-white' : 'border-cyan-100 bg-cyan-50/80 hover:bg-cyan-100/90'}`}
                         >
-                          <div className="text-sm font-medium">{n.type}</div>
-                          <div className="text-sm text-gray-700">{n.message}</div>
-                          <div className="text-xs text-gray-400">{new Date(n.created_at).toLocaleString()}</div>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold text-slate-950">{n.type}</div>
+                              <div className="mt-1 text-sm leading-6 text-slate-600">{n.message}</div>
+                            </div>
+                            <span className="rounded-full bg-white px-2 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-slate-500">{n.is_read ? 'Read' : 'New'}</span>
+                          </div>
+                          <div className="mt-2 text-xs text-slate-400">{new Date(n.created_at).toLocaleString()}</div>
                         </div>
                       ))
                     )}
@@ -160,11 +184,12 @@ export default function Nav() {
               )}
             </div>
 
-            <button onClick={logout} className="text-red-600">
+            <button onClick={logout} className="rounded-2xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50">
               Logout
             </button>
           </div>
         )}
+        </div>
       </div>
     </nav>
   );

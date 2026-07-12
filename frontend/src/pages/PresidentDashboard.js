@@ -310,7 +310,7 @@ export default function PresidentDashboard() {
         onConfirm={toggleRegistrations}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
         <DashboardSidebar
           title="President Dashboard"
           subtitle="Manage events, participants, and registration controls."
@@ -321,11 +321,11 @@ export default function PresidentDashboard() {
         />
 
         <main className="space-y-6">
-          <header className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <div className="flex flex-wrap items-start justify-between gap-4">
+          <header className="rounded-[2rem] bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-cyan-700">Participation control</p>
-                <h1 className="mt-2 text-3xl font-semibold text-slate-950">Hello {user?.name || "President"}</h1>
+                <h1 className="mt-2 text-2xl font-semibold text-slate-950 sm:text-3xl">Hello {user?.name || "President"}</h1>
                 <p className="mt-2 text-sm text-slate-600">Monitor registrations, export participant lists, and keep activity seats under control.</p>
               </div>
               <button
@@ -334,7 +334,7 @@ export default function PresidentDashboard() {
                   setEditingEvent(null);
                   setEventForm(null);
                 }}
-                className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                className="w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 sm:w-auto"
               >
                 {showCreateForm ? "Cancel" : "+ Create New Event"}
               </button>
@@ -358,7 +358,7 @@ export default function PresidentDashboard() {
           )}
 
           {showCreateForm && (
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
               <h3 className="mb-4 text-xl font-semibold text-slate-950">{editingEvent ? "Edit Event" : "Create New Event"}</h3>
               <EventForm
                 event={editingEvent}
@@ -374,8 +374,8 @@ export default function PresidentDashboard() {
           )}
 
           {activeSection === "my-events" && (
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="mb-4 flex items-center justify-between gap-4">
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <h3 className="text-xl font-semibold text-slate-950">My Events ({dashboardData.events.length})</h3>
                 <p className="text-sm text-slate-500">Use the activity panel to open or close registrations.</p>
               </div>
@@ -383,7 +383,7 @@ export default function PresidentDashboard() {
               {dashboardData.events.length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-500">No events created yet.</p>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
                   {dashboardData.events.map((event) => (
                     <article key={event.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                       <h4 className="text-lg font-semibold text-slate-950">{event.name}</h4>
@@ -408,8 +408,8 @@ export default function PresidentDashboard() {
           )}
 
           {activeSection === "participants" && (
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+              <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h3 className="text-xl font-semibold text-slate-950">Participants</h3>
                   <p className="text-sm text-slate-500">Select an activity to inspect its registrations.</p>
@@ -417,7 +417,7 @@ export default function PresidentDashboard() {
                 <select
                   value={selectedActivityId || ""}
                   onChange={(e) => setSelectedActivityId(Number(e.target.value) || null)}
-                  className="min-w-[260px] rounded-2xl border border-slate-300 px-4 py-3 text-sm"
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm lg:w-auto lg:min-w-[260px]"
                 >
                   <option value="">Select activity</option>
                   {dashboardData.activities.map((activity) => (
@@ -436,20 +436,20 @@ export default function PresidentDashboard() {
                     <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs uppercase tracking-[0.2em] text-slate-500">Remaining Seats</p><p className="mt-2 font-semibold text-slate-950">{selectedActivity.max_participants ? Math.max(Number(selectedActivity.max_participants) - (selectedActivity.registration_count || 0), 0) : "Unlimited"}</p></div>
                   </div>
 
-                  <div className="mb-4 flex flex-wrap gap-3">
+                  <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:flex-wrap">
                     <input
                       value={participantSearch}
                       onChange={(e) => setParticipantSearch(e.target.value)}
                       placeholder="Search participants"
-                      className="min-w-[240px] rounded-2xl border border-slate-300 px-4 py-3 text-sm"
+                      className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm xl:min-w-[240px] xl:flex-1"
                     />
-                    <select value={participantStatus} onChange={(e) => setParticipantStatus(e.target.value)} className="rounded-2xl border border-slate-300 px-4 py-3 text-sm">
+                    <select value={participantStatus} onChange={(e) => setParticipantStatus(e.target.value)} className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm xl:w-auto">
                       <option value="all">All Attendance</option>
                       <option value="pending">Pending</option>
                       <option value="present">Present</option>
                       <option value="absent">Absent</option>
                     </select>
-                    <select value={participantPayment} onChange={(e) => setParticipantPayment(e.target.value)} className="rounded-2xl border border-slate-300 px-4 py-3 text-sm">
+                    <select value={participantPayment} onChange={(e) => setParticipantPayment(e.target.value)} className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm xl:w-auto">
                       <option value="all">All Payments</option>
                       <option value="free">Free</option>
                       <option value="pending">Pending</option>
@@ -465,8 +465,8 @@ export default function PresidentDashboard() {
                     </button>
                   </div>
 
-                  <div className="overflow-hidden rounded-3xl border border-slate-200">
-                    <table className="min-w-full divide-y divide-slate-200 text-sm">
+                  <div className="overflow-x-auto rounded-3xl border border-slate-200">
+                    <table className="min-w-[900px] divide-y divide-slate-200 text-sm">
                       <thead className="bg-slate-50 text-slate-600">
                         <tr>
                           <th className="px-4 py-3 text-left">Student Name</th>
@@ -505,7 +505,7 @@ export default function PresidentDashboard() {
           )}
 
           {activeSection === "notifications" && (
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
               <h3 className="mb-4 text-xl font-semibold text-slate-950">Notifications</h3>
               <div className="space-y-3">
                 {notifications.length === 0 ? (
@@ -525,7 +525,7 @@ export default function PresidentDashboard() {
           )}
 
           {activeSection === "analytics" && (
-            <section className="grid gap-4 md:grid-cols-2">
+            <section className="grid gap-4 lg:grid-cols-2">
               <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                 <h3 className="text-xl font-semibold text-slate-950">Activities Overview</h3>
                 <div className="mt-4 space-y-3">
@@ -565,7 +565,7 @@ export default function PresidentDashboard() {
           )}
 
           {activeSection === "settings" && (
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
               <h3 className="text-xl font-semibold text-slate-950">Settings</h3>
               <p className="mt-2 text-sm text-slate-600">Registration controls, email notifications, and export settings can be configured here later without changing the participant workflow.</p>
             </section>
