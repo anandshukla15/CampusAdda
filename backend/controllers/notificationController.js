@@ -1,7 +1,7 @@
 const db = require("../config/db");
 const NOTIFICATION_TTL_HOURS = 24;
 
-// Get notifications relevant to the logged in user
+
 exports.getNotifications = async (req, res) => {
   const userId = req.user.id;
   const role = req.user.role;
