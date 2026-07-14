@@ -5,7 +5,7 @@ const https = require("https");
 
 const router = express.Router();
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL ;
 
 const queryDb = (sql, params = []) =>
   new Promise((resolve, reject) => {
