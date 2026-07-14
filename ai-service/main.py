@@ -11,7 +11,11 @@ langgraph_chatbot = LangGraphChatbotService(rags)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5000"],
+     allow_origins=[
+        "http://localhost:3000",
+        "https://campus-adda-azure.vercel.app/",
+        "https://campusadda-8e15.onrender.com "
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
