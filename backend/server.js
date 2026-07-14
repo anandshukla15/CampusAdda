@@ -36,7 +36,7 @@ if (!fs.existsSync(uploadsDir)) {
 // app.use(cors());
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://campusadda.vercel.app",
+  "https://campus-adda-azure.vercel.app/",
 ];
 
 app.use(
