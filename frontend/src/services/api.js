@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({  
-    baseURL: 'https://campusadda-api.onrender.com/api'});
+    baseURL: 'https://campusadda-8e15.onrender.com/api'});
 
 
     API.interceptors.request.use((config) => {
