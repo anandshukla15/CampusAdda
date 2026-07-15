@@ -7,6 +7,9 @@ const fs = require("fs");
 const path = require("path");
 const passport = require("passport");
 
+const { setServers } = require("node:dns/promises");
+setServers(["1.1.1.1", "8.8.8.8"]);
+
 
 const authRoutes = require("./routes/authRoutes");
 const collegeRoutes = require("./routes/collegeRoutes");
