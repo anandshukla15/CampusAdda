@@ -65,13 +65,7 @@ exports.register = async (req, res) => {
 
 exports.login=async(req,res)=>{
      const { email, password } = req.body;
-     console.log({
-  ADMIN_USERNAME: process.env.ADMIN_USERNAME,
-  ADMIN_EMAIL: process.env.ADMIN_EMAIL,
-  hasPassword: !!process.env.ADMIN_PASSWORD,
-  JWT_SECRET: !!process.env.JWT_SECRET,
-  enteredEmail: email,
-});
+     
   // Admin login via environment variables (centralized control)
   const adminUser = process.env.ADMIN_USERNAME;
   const adminPass = process.env.ADMIN_PASSWORD;
