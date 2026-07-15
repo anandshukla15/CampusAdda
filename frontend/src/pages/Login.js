@@ -42,7 +42,7 @@ export default function Login() {
 
   const handleGoogleLogin = () => {
     window.location.href =
-      "http://localhost:5000/api/auth/google";
+      "https://campusadda-8e15.onrender.com/api/auth/google";
   };
 
   return (
