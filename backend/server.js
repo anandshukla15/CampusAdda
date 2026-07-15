@@ -39,24 +39,25 @@ if (!fs.existsSync(uploadsDir)) {
 // app.use(cors());
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://campus-adda-azure.vercel.app/",
+  "https://campus-adda-azure.vercel.app",
 ];
 
 app.use(
   cors({
-    origin: function (origin, callback) {
+    origin: (origin, callback) => {
+      console.log("Origin:", origin);
+
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+        return callback(null, true);
       }
+
+      callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
   })
 );
-
 app.use(express.json());
 app.use("/uploads", express.static(uploadsDir));
 app.use(passport.initialize());
