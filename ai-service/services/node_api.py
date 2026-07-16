@@ -1,6 +1,6 @@
 import requests
 
-BASE_URL = "http://localhost:5000/api/ai"
+BASE_URL = "https://campusadda-8e15.onrender.com/api/ai"
 
 
 def search_events(query):
