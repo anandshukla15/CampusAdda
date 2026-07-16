@@ -1,13 +1,20 @@
 const { Server } = require("socket.io");
 
+
 let io;
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://campus-adda-azure.vercel.app"
+];
 
 module.exports = {
   init: (server) => {
     io = new Server(server, {
       cors: {
-        origin: "https://campus-adda-azure.vercel.app",
-        methods: ["GET", "POST"]
+        origin: allowedOrigins,
+        methods: ["GET", "POST"],
+        credentials: true
       }
     });
 
