@@ -7,6 +7,8 @@ exports.register = async (req, res) => {
   const document_url = req.file
     ? req.file.secure_url || req.file.path
     : null;
+
+    console.log("Registering user with data:", { name, email, role, college_name, roll_no, document_url });
   
   // Validate role
   if (!["user", "president"].includes(role)) {
@@ -38,7 +40,7 @@ exports.register = async (req, res) => {
         
         const userId = result.insertId;
 
-        //console.log(`User registered with ID: ${userId} and role: ${role}`);
+        console.log(`User registered with ID: ${userId} and role: ${role}`);
         if (role === "president") {
           db.query(
             "INSERT INTO president_applications(user_id,name,roll_no,college_name,document_url,status) VALUES(?,?,?,?,?,?)",
