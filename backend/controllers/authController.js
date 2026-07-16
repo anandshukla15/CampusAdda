@@ -3,12 +3,15 @@ const bcrypt=require("bcrypt");
 const jwt=require("jsonwebtoken");
 
 exports.register = async (req, res) => {
-  const { name, email, password, role = "user", college_name, roll_no } = req.body;
-  const document_url = req.file
-    ? req.file.secure_url || req.file.path
-    : null;
 
-    console.log("Registering user with data:", { name, email, role, college_name, roll_no, document_url });
+  try {
+
+  const { name, email, password, role = "user", college_name, roll_no } = req.body;
+ 
+
+    const document_url = req.file?.secure_url || req.body.document_url || req.file?.path || null;
+
+    //console.log("Registering user with data:", { name, email, role, college_name, roll_no, document_url });
   
   // Validate role
   if (!["user", "president"].includes(role)) {
@@ -24,7 +27,7 @@ exports.register = async (req, res) => {
     }
   }
 
-  try {
+  
     const hashed = await bcrypt.hash(password, 10);
     
     db.query(
@@ -40,7 +43,7 @@ exports.register = async (req, res) => {
         
         const userId = result.insertId;
 
-        console.log(`User registered with ID: ${userId} and role: ${role}`);
+       // console.log(`User registered with ID: ${userId} and role: ${role}`);
         if (role === "president") {
           db.query(
             "INSERT INTO president_applications(user_id,name,roll_no,college_name,document_url,status) VALUES(?,?,?,?,?,?)",
@@ -61,7 +64,8 @@ exports.register = async (req, res) => {
       }
     );
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.log("Error during registration:", error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
