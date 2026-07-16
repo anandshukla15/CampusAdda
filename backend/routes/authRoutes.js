@@ -30,7 +30,7 @@ router.get(
     );
 
     res.redirect(
-      `http://localhost:3000/oauth-success?token=${token}`
+      `https://campus-adda-azure.vercel.app/oauth-success?token=${token}`
     );
   }
 );
