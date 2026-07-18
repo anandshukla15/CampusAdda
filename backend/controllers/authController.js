@@ -3,69 +3,111 @@ const bcrypt=require("bcrypt");
 const jwt=require("jsonwebtoken");
 
 exports.register = async (req, res) => {
+  let connection;
 
   try {
+    const {
+      name,
+      email,
+      password,
+      role = "user",
+      college_name,
+      roll_no
+    } = req.body;
 
-  const { name, email, password, role = "user", college_name, roll_no } = req.body;
- 
+    const document_url =
+      req.file?.secure_url ||
+      req.body.document_url ||
+      req.file?.path ||
+      null;
 
-    const document_url = req.file?.secure_url || req.body.document_url || req.file?.path || null;
-
-    //console.log("Registering user with data:", { name, email, role, college_name, roll_no, document_url });
-  
-  // Validate role
-  if (!["user", "president"].includes(role)) {
-    return res.status(400).json({ error: "Invalid role. Only 'user' and 'president' allowed during registration" });
-  }
-
-  if (role === "president") {
-    if (!college_name || !roll_no) {
-      return res.status(400).json({ error: "College name and roll number are required for president registration" });
+    if (!["user", "president"].includes(role)) {
+      return res.status(400).json({
+        error: "Invalid role"
+      });
     }
-    if (!document_url) {
-      return res.status(400).json({ error: "A PDF document is required for president registration" });
-    }
-  }
 
-  
-    const hashed = await bcrypt.hash(password, 10);
-    
-    db.query(
-      "INSERT INTO users(name,email,password,role,college_name,roll_no) VALUES(?,?,?,?,?,?)",
-      [name, email, hashed, role === "president" ? "user" : role, college_name || null, roll_no || null],
-      (err, result) => {
-        if (err) {
-          if (err.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ error: "Email already exists" });
-          }
-          return res.status(500).json({ error: err.message });
-        }
-        
-        const userId = result.insertId;
-
-       // console.log(`User registered with ID: ${userId} and role: ${role}`);
-        if (role === "president") {
-          db.query(
-            "INSERT INTO president_applications(user_id,name,roll_no,college_name,document_url,status) VALUES(?,?,?,?,?,?)",
-            [userId, name, roll_no, college_name, document_url, "pending"],
-            (err) => {
-              if (err) {
-                console.error("Failed to save president application:", err);
-                return res.status(500).json({ error: err.message });
-              }
-              res.status(201).json({ 
-                message: "Registered successfully. Your president application is pending admin approval." 
-              });
-            }
-          );
-        } else {
-          res.status(201).json({ message: "User registered successfully" });
-        }
+    if (role === "president") {
+      if (!college_name || !roll_no) {
+        return res.status(400).json({
+          error: "College name and roll number are required"
+        });
       }
+
+      if (!document_url) {
+        return res.status(400).json({
+          error: "A PDF document is required"
+        });
+      }
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    connection = await db.promise().getConnection();
+
+    await connection.beginTransaction();
+
+    const [result] = await connection.query(
+      `INSERT INTO users
+      (name, email, password, role, college_name, roll_no)
+      VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        name,
+        email,
+        hashed,
+        role === "president" ? "user" : role,
+        college_name || null,
+        roll_no || null
+      ]
     );
+
+    const userId = result.insertId;
+
+    if (role === "president") {
+      await connection.query(
+        `INSERT INTO president_applications
+        (user_id, name, roll_no, college_name, document_url, status)
+        VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          name,
+          roll_no,
+          college_name,
+          document_url,
+          "pending"
+        ]
+      );
+    }
+
+    await connection.commit();
+
+    connection.release();
+
+    return res.status(201).json({
+      message:
+        role === "president"
+          ? "Registered successfully. Your president application is pending admin approval."
+          : "User registered successfully"
+    });
+
   } catch (error) {
-    console.log("Error during registration:", error);
-    return res.status(500).json({ error: error.message });
+
+    if (connection) {
+      await connection.rollback();
+      connection.release();
+    }
+
+    console.error("Registration error:", error);
+
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(400).json({
+        error: "Email already exists"
+      });
+    }
+
+    return res.status(500).json({
+      error: error.message
+    });
   }
 };
 
