@@ -86,59 +86,110 @@ exports.approveApplication = async (req, res) => {
   const { applicationId } = req.params;
   const { admin_comments } = req.body;
 
+  let connection;
+
   try {
-    db.query(
-      "SELECT user_id FROM president_applications WHERE id = ?",
-      [applicationId],
-      (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (!result || result.length === 0) {
-          return res.status(404).json({ error: "Application not found" });
-        }
+    connection = await db.promise().getConnection();
 
-        const userId = result[0].user_id;
+    await connection.beginTransaction();
 
-        // Update application status
-        db.query(
-          "UPDATE president_applications SET status = 'approved', admin_comments = ?, approved_at = NOW() WHERE id = ?",
-          [admin_comments, applicationId],
-          (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-
-            // Update user role to president
-            db.query(
-              "UPDATE users SET role = 'president' WHERE id = ?",
-              [userId],
-              (err) => {
-                if (err) return res.status(500).json({ error: err.message });
-                // create notification for the user who was approved
-                const message = `Your application to become president has been approved`;
-                const data = JSON.stringify({ userId });
-                db.query(
-                  "INSERT INTO notifications (recipient_user_id, recipient_role, type, message, data) VALUES (?, NULL, 'president_approved', ?, ?)",
-                  [userId, message, data],
-                  (err) => {
-                    if (err) console.error("Failed to create approval notification:", err.message);
-                  }
-                );
-
-                // emit to the specific user via socket
-                try {
-                  const io = socketConfig.getIO();
-                  io.to(`user_${userId}`).emit("notification", { type: "president_approved", message, data: { userId } });
-                } catch (err) {
-                  console.error("Socket emit error:", err.message);
-                }
-
-                res.json({ message: "Application approved. User role updated to president" });
-              }
-            );
-          }
-        );
-      }
+    // 1. Get user ID
+    const [applications] = await connection.query(
+      `SELECT user_id
+       FROM president_applications
+       WHERE id = ?`,
+      [applicationId]
     );
+
+    if (applications.length === 0) {
+      connection.release();
+
+      return res.status(404).json({
+        error: "Application not found"
+      });
+    }
+
+    const userId = applications[0].user_id;
+
+    // 2. Update application
+    await connection.query(
+      `UPDATE president_applications
+       SET status = 'approved',
+           admin_comments = ?,
+           approved_at = NOW()
+       WHERE id = ?`,
+      [admin_comments || null, applicationId]
+    );
+
+    // 3. Update user role
+    await connection.query(
+      `UPDATE users
+       SET role = 'president'
+       WHERE id = ?`,
+      [userId]
+    );
+
+    // 4. Create notification
+    const message =
+      "Your application to become president has been approved";
+
+    const data = JSON.stringify({
+      userId
+    });
+
+    await connection.query(
+      `INSERT INTO notifications
+       (recipient_user_id, recipient_role, type, message, data)
+       VALUES (?, NULL, 'president_approved', ?, ?)`,
+      [userId, message, data]
+    );
+
+    await connection.commit();
+
+    connection.release();
+
+    // 5. Emit socket notification
+    try {
+      const io = socketConfig.getIO();
+
+      io.to(`user_${userId}`).emit(
+        "notification",
+        {
+          type: "president_approved",
+          message,
+          data: {
+            userId
+          }
+        }
+      );
+
+    } catch (socketError) {
+      console.error(
+        "Socket emit error:",
+        socketError.message
+      );
+    }
+
+    return res.json({
+      message:
+        "Application approved. User role updated to president"
+    });
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+
+    if (connection) {
+      await connection.rollback();
+      connection.release();
+    }
+
+    console.error(
+      "Approve application error:",
+      error
+    );
+
+    return res.status(500).json({
+      error: error.message
+    });
   }
 };
 
