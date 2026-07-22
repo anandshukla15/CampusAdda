@@ -39,8 +39,8 @@ const validateActivity = (activity) => {
   return null;
 };
 
-const insertActivity = (activity) =>
-  query(
+const insertActivity = (activity, connection) =>
+  connection.query(
     `INSERT INTO event_activities
       (event_id, activity_name, activity_description, activity_type, venue, event_date, start_time, registration_link, max_participants)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
