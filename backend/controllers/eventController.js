@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const socketConfig = require("../config/socket");
 const EventActivity = require("../models/EventActivity");
+const transaction = require("../utils/transaction");
 const axios = require("axios");
 
 const query = EventActivity.query;
@@ -157,51 +158,79 @@ exports.getEventById = async (req, res) => {
   }
 };
 
+
 exports.createEvent = async (req, res) => {
   const userId = req.user.id;
-  const { name, category, date, description, location, link, photo_url, activities = [] } = req.body;
+
+  const {
+    name,
+    category,
+    date,
+    description,
+    location,
+    link,
+    photo_url,
+    activities = []
+  } = req.body;
 
   if (!isEventManager(req.user)) {
-    return res.status(403).json({ error: "Only presidents and admins can create events" });
+    return res.status(403).json({
+      error: "Only presidents and admins can create events"
+    });
   }
 
   if (!name || !category) {
-    return res.status(400).json({ error: "Fest name and category are required" });
+    return res.status(400).json({
+      error: "Fest name and category are required"
+    });
   }
 
   if (!["cultural", "sports", "tech"].includes(category)) {
-    return res.status(400).json({ error: "Invalid category. Must be cultural, sports, or tech" });
+    return res.status(400).json({
+      error: "Invalid category"
+    });
   }
 
   const eventDate = getEventDate(date, activities);
+
   if (!eventDate) {
-    return res.status(400).json({ error: "Add at least one activity date or provide an event date" });
+    return res.status(400).json({
+      error: "Add at least one activity date or provide an event date"
+    });
   }
 
   try {
-    await beginTransaction();
+    const eventId = await transaction(async (connection) => {
 
-    const result = await query(
-      `INSERT INTO events (name, category, date, description, location, link, photo_url, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        name.trim(),
-        category,
-        eventDate,
-        description || null,
-        location || null,
-        link || null,
-        photo_url || null,
-        userId
-      ]
-    );
+      const [result] = await connection.query(
+        `INSERT INTO events
+        (name, category, date, description, location, link, photo_url, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          name.trim(),
+          category,
+          eventDate,
+          description || null,
+          location || null,
+          link || null,
+          photo_url || null,
+          userId
+        ]
+      );
 
-    const eventId = result.insertId;
-    if (activities.length) {
-      await EventActivity.bulkCreate(eventId, activities, category);
-    }
+      const eventId = result.insertId;
 
-    await commit();
+      if (activities.length) {
+        await EventActivity.bulkCreate(
+          eventId,
+          activities,
+          category,
+          connection
+        );
+      }
+
+      return eventId;
+    });
 
     const persistedEvent = {
       id: eventId,
@@ -217,21 +246,28 @@ exports.createEvent = async (req, res) => {
 
     await triggerAiIndexing(persistedEvent, activities);
 
-    sendNewEventNotification(eventId, {
-      name,
-      category,
-      date: eventDate,
-      created_by: userId
-    }, req.user.role);
+    sendNewEventNotification(
+      eventId,
+      {
+        name,
+        category,
+        date: eventDate,
+        created_by: userId
+      },
+      req.user.role
+    );
 
     res.status(201).json({
       message: "Event created successfully",
       eventId
     });
+
   } catch (error) {
-    await rollback();
     console.error("Error creating event:", error);
-    res.status(error.statusCode || 500).json({ error: error.message });
+
+    res.status(error.statusCode || 500).json({
+      error: error.message
+    });
   }
 };
 

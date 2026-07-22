@@ -81,13 +81,19 @@ exports.findById = (id) =>
 
 exports.create = insertActivity;
 
-exports.bulkCreate = async (eventId, activities, fallbackType) => {
+exports.bulkCreate = async (
+  eventId,
+  activities,
+  fallbackType,
+  connection
+) => {
   const normalizedActivities = activities.map((activity) =>
     normalizeActivity(activity, eventId, fallbackType)
   );
 
   for (const activity of normalizedActivities) {
     const error = validateActivity(activity);
+
     if (error) {
       const validationError = new Error(error);
       validationError.statusCode = 400;
@@ -96,7 +102,7 @@ exports.bulkCreate = async (eventId, activities, fallbackType) => {
   }
 
   for (const activity of normalizedActivities) {
-    await insertActivity(activity);
+    await insertActivity(activity, connection);
   }
 
   return normalizedActivities;
