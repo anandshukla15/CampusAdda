@@ -1,12 +1,9 @@
 const db = require("../config/db");
 
-const query = (sql, params = []) =>
-  new Promise((resolve, reject) => {
-    db.query(sql, params, (err, result) => {
-      if (err) return reject(err);
-      resolve(result);
-    });
-  });
+const query = async (sql, params = []) => {
+  const [rows] = await db.query(sql, params);
+  return rows;
+};
 
 const normalizeActivity = (activity, eventId, fallbackType) => ({
   event_id: eventId,
@@ -39,10 +36,20 @@ const validateActivity = (activity) => {
   return null;
 };
 
-const insertActivity = (activity, connection) =>
-  connection.query(
+const insertActivity = async (activity, connection = db) => {
+  const [result] = await connection.query(
     `INSERT INTO event_activities
-      (event_id, activity_name, activity_description, activity_type, venue, event_date, start_time, registration_link, max_participants)
+      (
+        event_id,
+        activity_name,
+        activity_description,
+        activity_type,
+        venue,
+        event_date,
+        start_time,
+        registration_link,
+        max_participants
+      )
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       activity.event_id,
@@ -56,6 +63,9 @@ const insertActivity = (activity, connection) =>
       activity.max_participants
     ]
   );
+
+  return result;
+};
 
 exports.query = query;
 exports.normalizeActivity = normalizeActivity;
@@ -79,13 +89,13 @@ exports.findById = (id) =>
     [id]
   );
 
-exports.create = insertActivity;
+exports.create = (activity) => insertActivity(activity);
 
 exports.bulkCreate = async (
   eventId,
   activities,
   fallbackType,
-  connection
+  connection = db
 ) => {
   const normalizedActivities = activities.map((activity) =>
     normalizeActivity(activity, eventId, fallbackType)
@@ -111,8 +121,15 @@ exports.bulkCreate = async (
 exports.update = (id, activity) =>
   query(
     `UPDATE event_activities
-     SET activity_name = ?, activity_description = ?, activity_type = ?, venue = ?, event_date = ?,
-         start_time = ?, registration_link = ?, max_participants = ?
+     SET
+       activity_name = ?,
+       activity_description = ?,
+       activity_type = ?,
+       venue = ?,
+       event_date = ?,
+       start_time = ?,
+       registration_link = ?,
+       max_participants = ?
      WHERE id = ?`,
     [
       activity.activity_name,
@@ -127,9 +144,25 @@ exports.update = (id, activity) =>
     ]
   );
 
-exports.delete = (id) => query("DELETE FROM event_activities WHERE id = ?", [id]);
+exports.delete = (id) =>
+  query(
+    "DELETE FROM event_activities WHERE id = ?",
+    [id]
+  );
 
-exports.replaceForEvent = async (eventId, activities, fallbackType) => {
-  await query("DELETE FROM event_activities WHERE event_id = ?", [eventId]);
-  return exports.bulkCreate(eventId, activities, fallbackType);
+exports.replaceForEvent = async (
+  eventId,
+  activities,
+  fallbackType
+) => {
+  await query(
+    "DELETE FROM event_activities WHERE event_id = ?",
+    [eventId]
+  );
+
+  return exports.bulkCreate(
+    eventId,
+    activities,
+    fallbackType
+  );
 };
