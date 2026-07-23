@@ -244,7 +244,10 @@ exports.createEvent = async (req, res) => {
       created_by: userId
     };
 
-    await triggerAiIndexing(persistedEvent, activities);
+    triggerAiIndexing(persistedEvent, activities)
+    .catch(error => {
+      console.error("AI indexing failed:", error.message);
+    });
 
     sendNewEventNotification(
       eventId,
