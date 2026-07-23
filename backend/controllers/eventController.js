@@ -88,7 +88,11 @@ const triggerAiIndexing = async (eventPayload, activities = []) => {
   }
 };
 
-const sendNewEventNotification = (eventId, event, creatorRole) => {
+const sendNewEventNotification = async (
+  eventId,
+  event,
+  creatorRole
+) =>{
   if (creatorRole !== "president") {
     return;
   }
