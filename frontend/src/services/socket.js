@@ -1,4 +1,5 @@
 import { io } from "socket.io-client";
 
-const socket = io("https://campusadda-8e15.onrender.com");
+const socket = io(process.env.REACT_APP_SOCKET_URL);
+
 export default socket;

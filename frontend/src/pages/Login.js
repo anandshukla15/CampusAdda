@@ -39,11 +39,10 @@ export default function Login() {
       setLoading(false);
     }
   };
-
-  const handleGoogleLogin = () => {
+const handleGoogleLogin = () => {
     window.location.href =
-      "https://campusadda-8e15.onrender.com/api/auth/google";
-  };
+        `${process.env.REACT_APP_API_URL}/auth/google`;
+};
 
   return (
     <div className="max-w-md mx-auto mt-20 p-6 bg-white rounded-xl shadow-lg">
