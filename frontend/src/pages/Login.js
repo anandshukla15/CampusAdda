@@ -4,7 +4,7 @@ import API from "../services/api";
 import { getUser } from "../utils/decodeToken";
 import { useLocation } from "react-router-dom";
 export default function Login() {
-  const location = useLocation();
+  //const location = useLocation();
 
   
   //console.log("PATH:", location.pathname);
