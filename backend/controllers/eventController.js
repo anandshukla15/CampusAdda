@@ -6,14 +6,7 @@ const axios = require("axios");
 
 const query = EventActivity.query;
 
-const beginTransaction = () =>
-  new Promise((resolve, reject) => db.beginTransaction((err) => (err ? reject(err) : resolve())));
 
-const commit = () =>
-  new Promise((resolve, reject) => db.commit((err) => (err ? reject(err) : resolve())));
-
-const rollback = () =>
-  new Promise((resolve) => db.rollback(() => resolve()));
 
 const isEventManager = (user) => user?.role === "president" || user?.role === "admin";
 
@@ -92,12 +85,13 @@ const sendNewEventNotification = async (
   eventId,
   event,
   creatorRole
-) =>{
+) => {
   if (creatorRole !== "president") {
     return;
   }
 
   const message = `New event added: ${event.name}`;
+
   const data = JSON.stringify({
     eventId,
     name: event.name,
@@ -106,25 +100,52 @@ const sendNewEventNotification = async (
     created_by: event.created_by
   });
 
-  db.query(
-    "INSERT INTO notifications (recipient_user_id, recipient_role, type, message, data) VALUES (NULL, 'all', 'new_event', ?, ?)",
-    [message, data],
-    (err) => {
-      if (err) console.error("Failed to create notification:", err.message);
-    }
-  );
+  try {
+    await db.query(
+      `INSERT INTO notifications
+       (
+         recipient_user_id,
+         recipient_role,
+         type,
+         message,
+         data
+       )
+       VALUES (NULL, 'all', 'new_event', ?, ?)`,
+      [message, data]
+    );
+
+  } catch (error) {
+    console.error(
+      "Failed to create notification:",
+      error.message
+    );
+  }
 
   try {
     const io = socketConfig.getIO();
-    io.emit("notification", {
-      type: "new_event",
-      message,
-      data: { eventId, name: event.name, category: event.category, date: event.date }
-    });
-  } catch (err) {
-    console.error("Socket emit error:", err.message);
+
+    io.emit(
+      "notification",
+      {
+        type: "new_event",
+        message,
+        data: {
+          eventId,
+          name: event.name,
+          category: event.category,
+          date: event.date
+        }
+      }
+    );
+
+  } catch (error) {
+    console.error(
+      "Socket emit error:",
+      error.message
+    );
   }
 };
+
 
 exports.getAllEvents = async (req, res) => {
   try {
@@ -282,68 +303,122 @@ exports.updateEvent = async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   const { role } = req.user;
-  const { name, category, date, description, location, link, photo_url, activities } = req.body;
+
+  const {
+    name,
+    category,
+    date,
+    description,
+    location,
+    link,
+    photo_url,
+    activities
+  } = req.body;
 
   try {
-    const rows = await query("SELECT * FROM events WHERE id = ?", [id]);
+    const rows = await query(
+      "SELECT * FROM events WHERE id = ?",
+      [id]
+    );
+
     if (!rows.length) {
-      return res.status(404).json({ error: "Event not found" });
+      return res.status(404).json({
+        error: "Event not found"
+      });
     }
 
-    if (role !== "admin" && (role !== "president" || rows[0].created_by !== userId)) {
-      return res.status(403).json({ error: "You can only edit your own events" });
+    if (
+      role !== "admin" &&
+      (
+        role !== "president" ||
+        String(rows[0].created_by) !== String(userId)
+      )
+    ) {
+      return res.status(403).json({
+        error: "You can only edit your own events"
+      });
     }
 
     if (!name || !category) {
-      return res.status(400).json({ error: "Fest name and category are required" });
+      return res.status(400).json({
+        error: "Fest name and category are required"
+      });
     }
 
-    if (!["cultural", "sports", "tech"].includes(category)) {
-      return res.status(400).json({ error: "Invalid category. Must be cultural, sports, or tech" });
+    if (
+      !["cultural", "sports", "tech"].includes(category)
+    ) {
+      return res.status(400).json({
+        error:
+          "Invalid category. Must be cultural, sports, or tech"
+      });
     }
 
-    const eventDate = getEventDate(date, activities || [], rows[0].date);
-
-    await beginTransaction();
-
-    await query(
-      `UPDATE events
-       SET name = ?, category = ?, date = ?, description = ?, location = ?, link = ?, photo_url = ?
-       WHERE id = ?`,
-      [
-        name.trim(),
-        category,
-        eventDate,
-        description || null,
-        location || null,
-        link || null,
-        photo_url || null,
-        id
-      ]
+    const eventDate = getEventDate(
+      date,
+      activities || [],
+      rows[0].date
     );
 
-    if (Array.isArray(activities)) {
-      await EventActivity.replaceForEvent(id, activities, category);
-    }
+    await transaction(async (connection) => {
+      await connection.query(
+        `UPDATE events
+         SET
+           name = ?,
+           category = ?,
+           date = ?,
+           description = ?,
+           location = ?,
+           link = ?,
+           photo_url = ?
+         WHERE id = ?`,
+        [
+          name.trim(),
+          category,
+          eventDate,
+          description || null,
+          location || null,
+          link || null,
+          photo_url || null,
+          id
+        ]
+      );
 
-    await commit();
+      if (Array.isArray(activities)) {
+        await EventActivity.replaceForEvent(
+          id,
+          activities,
+          category,
+          connection
+        );
+      }
+    });
 
-    await triggerAiIndexing({
-      id,
-      name,
-      category,
-      date: eventDate,
-      description,
-      location,
-      link,
-      photo_url,
-      created_by: userId
-    }, activities || []);
+    await triggerAiIndexing(
+      {
+        id,
+        name,
+        category,
+        date: eventDate,
+        description,
+        location,
+        link,
+        photo_url,
+        created_by: userId
+      },
+      activities || []
+    );
 
-    res.json({ message: "Event updated successfully" });
+    return res.json({
+      message: "Event updated successfully"
+    });
+
   } catch (error) {
-    await rollback();
-    res.status(error.statusCode || 500).json({ error: error.message });
+    console.error("Error updating event:", error);
+
+    return res.status(error.statusCode || 500).json({
+      error: error.message
+    });
   }
 };
 

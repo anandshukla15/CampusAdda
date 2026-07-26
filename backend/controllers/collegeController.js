@@ -1,23 +1,47 @@
 const db = require("../config/db");
 
-exports.addCollege = (req, res) => {
-  const { name } = req.body;
+exports.addCollege = async (req, res) => {
+  try {
+    const { name } = req.body;
 
-  if (!name) return res.status(400).json({ error: "College name is required" });
-
-  db.query(
-    "INSERT INTO colleges (name) VALUES (?)",
-    [name],
-    (err) => {
-      if (err) return res.status(500).json(err);
-      res.json({ msg: "College added" });
+    if (!name) {
+      return res.status(400).json({
+        error: "College name is required"
+      });
     }
-  );
+
+    await db.query(
+      "INSERT INTO colleges (name) VALUES (?)",
+      [name]
+    );
+
+    res.json({
+      msg: "College added"
+    });
+
+  } catch (err) {
+    console.error("Add college error:", err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
 };
 
-exports.getColleges = (req, res) => {
-  db.query("SELECT id, name, created_at FROM colleges", (err, result) => {
-    if (err) return res.status(500).json(err);
+
+exports.getColleges = async (req, res) => {
+  try {
+    const [result] = await db.query(
+      "SELECT id, name, created_at FROM colleges"
+    );
+
     res.json(result);
-  });
+
+  } catch (err) {
+    console.error("Get colleges error:", err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
 };

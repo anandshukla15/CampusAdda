@@ -6,9 +6,8 @@ import { useLocation } from "react-router-dom";
 export default function Login() {
   const location = useLocation();
 
-  console.log("LOGIN PAGE RENDERED");
-  console.trace("Who rendered login?");
-  console.log("PATH:", location.pathname);
+  
+  //console.log("PATH:", location.pathname);
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -21,7 +20,7 @@ export default function Login() {
 
     try {
       const res = await API.post("/auth/login", form);
-
+       console.log("Login Response:", res.data); // Log the response data for debugging
       localStorage.setItem("token", res.data.token);
 
       const user = getUser();

@@ -111,38 +111,66 @@ exports.register = async (req, res) => {
   }
 };
 
-exports.login=async(req,res)=>{
-     const { email, password } = req.body;
-     
-  // Admin login via environment variables (centralized control)
-  const adminUser = process.env.ADMIN_USERNAME;
-  const adminPass = process.env.ADMIN_PASSWORD;
-  const adminEmail = process.env.ADMIN_EMAIL;
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-  if (adminUser && adminPass && email === adminEmail) {
-    if (password !== adminPass) return res.status(400).json({ msg: "Wrong password" });
+    //console.log("Login request:", email);
 
-    const token = jwt.sign({ id: "admin", role: "admin" }, process.env.JWT_SECRET);
-    return res.json({ token, role: "admin", userId: "admin" });
-  }
+    const [result] = await db.query(
+      "SELECT * FROM users WHERE email = ?",
+      [email]
+    );
 
-  // Regular user login (DB)
-  db.query("SELECT * FROM users WHERE email=?", [email], async (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!result || result.length === 0) return res.status(400).json({ msg: "User not found" });
+    //console.log("DB query completed");
+
+    if (!result || result.length === 0) {
+      return res.status(400).json({
+        msg: "User not found"
+      });
+    }
 
     const user = result[0];
+
+    //console.log("User found:", user.email);
+
     if (!user.password) {
-  return res.status(400).json({
-    msg: "Please login with Google"
-  });
-}
+      return res.status(400).json({
+        msg: "Please login with Google"
+      });
+    }
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ msg: "Wrong password" });
 
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET);
+    if (!match) {
+      return res.status(400).json({
+        msg: "Wrong password"
+      });
+    }
 
-    res.json({ token, role: user.role, userId: user.id, name: user.name });
-  });
+    const token = jwt.sign(
+      {
+        id: user.id,
+        role: user.role
+      },
+      process.env.JWT_SECRET
+    );
+
+    //console.log("JWT generated");
+
+    return res.json({
+      token,
+      role: user.role,
+      userId: user.id,
+      name: user.name
+    });
+
+  } catch (error) {
+    //console.error("Login error:", error);
+
+    return res.status(500).json({
+      msg: "Server error",
+      error: error.message
+    });
+  }
 };

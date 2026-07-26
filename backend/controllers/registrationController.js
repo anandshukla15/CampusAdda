@@ -26,19 +26,32 @@ const formatTimeLabel = (value) => (value ? String(value).slice(0, 5) : "Not spe
 
 const buildActivityResponse = async (activity, userId = null) => {
   const registrationCount = await getRegisteredCount(activity.id);
+
   const remainingSeats = activity.max_participants
-    ? Math.max(Number(activity.max_participants) - registrationCount, 0)
+    ? Math.max(
+        Number(activity.max_participants) - registrationCount,
+        0
+      )
     : null;
 
   let myRegistration = null;
+
   if (userId) {
     const rows = await query(
-      `SELECT id, registration_id, status, payment_status, attendance_status, registered_at
+      `SELECT 
+        id,
+        registration_id,
+        status,
+        payment_status,
+        attendance_status,
+        registered_at
        FROM registrations
-       WHERE user_id = ? AND activity_id = ?
+       WHERE user_id = ?
+       AND activity_id = ?
        LIMIT 1`,
       [userId, activity.id]
     );
+
     myRegistration = rows[0] || null;
   }
 

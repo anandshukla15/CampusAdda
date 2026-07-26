@@ -1,20 +1,31 @@
 const db = require("../config/db");
 const { sendRegistrationConfirmation } = require("./emailService");
 
-const query = (sql, params = []) =>
-  new Promise((resolve, reject) => {
-    db.query(sql, params, (err, result) => {
-      if (err) return reject(err);
-      resolve(result);
-    });
-  });
+const query = async (sql, params = [], connection = db) => {
+  const [rows] = await connection.query(sql, params);
+  return rows;
+};
 
-const beginTransaction = () =>
-  new Promise((resolve, reject) => db.beginTransaction((err) => (err ? reject(err) : resolve())));
+const withTransaction = async (callback) => {
+  const connection = await db.getConnection();
 
-const commit = () => new Promise((resolve, reject) => db.commit((err) => (err ? reject(err) : resolve())));
+  try {
+    await connection.beginTransaction();
 
-const rollback = () => new Promise((resolve) => db.rollback(() => resolve()));
+    const result = await callback(connection);
+
+    await connection.commit();
+
+    return result;
+
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+
+  } finally {
+    connection.release();
+  }
+};
 
 const formatDateLabel = (value) =>
   value
@@ -38,46 +49,76 @@ const buildRegistrationId = (insertId) => {
   return `REG-${year}-${String(insertId).padStart(6, "0")}`;
 };
 
-const getActivityWithContext = async (activityId) => {
+const getActivityWithContext = async (
+  activityId,
+  connection = db
+) => {
   const rows = await query(
-    `SELECT ea.*, e.id as event_id, e.name as event_name, e.description as event_description,
-            e.category, e.location as event_location, e.photo_url as event_photo_url,
-            e.link as event_link, e.created_by, u.name as organizer_name,
-            u.email as organizer_email, u.college_name as organizer_college_name
+    `SELECT ea.*,
+            e.id AS event_id,
+            e.name AS event_name,
+            e.description AS event_description,
+            e.category,
+            e.location AS event_location,
+            e.photo_url AS event_photo_url,
+            e.link AS event_link,
+            e.created_by,
+            u.name AS organizer_name,
+            u.email AS organizer_email,
+            u.college_name AS organizer_college_name
      FROM event_activities ea
-     JOIN events e ON ea.event_id = e.id
-     JOIN users u ON e.created_by = u.id
+     JOIN events e
+       ON ea.event_id = e.id
+     JOIN users u
+       ON e.created_by = u.id
      WHERE ea.id = ?`,
-    [activityId]
+    [activityId],
+    connection
   );
 
   return rows[0] || null;
 };
 
-const getRegisteredCount = async (activityId) => {
+const getRegisteredCount = async (
+  activityId,
+  connection = db
+) => {
   const rows = await query(
     `SELECT COUNT(*) AS total
      FROM registrations
-     WHERE activity_id = ? AND status = 'registered'`,
-    [activityId]
+     WHERE activity_id = ?
+     AND status = 'registered'`,
+    [activityId],
+    connection
   );
 
-  return Number(rows[0]?.total || 0);
+  return Number(
+    rows[0]?.total || 0
+  );
 };
 
-const hasExistingRegistration = async (userId, activityId) => {
+const hasExistingRegistration = async (
+  userId,
+  activityId,
+  connection = db
+) => {
   const rows = await query(
     `SELECT *
      FROM registrations
-     WHERE user_id = ? AND activity_id = ?
+     WHERE user_id = ?
+     AND activity_id = ?
      LIMIT 1`,
-    [userId, activityId]
+    [
+      userId,
+      activityId
+    ],
+    connection
   );
 
   return rows[0] || null;
 };
 
-const getUser = async (userId) => {
+const getUser = async (userId, connection = db) => {
   const rows = await query(
     "SELECT id, name, email, college_name, role FROM users WHERE id = ?",
     [userId]
@@ -189,87 +230,162 @@ const isRegistrationClosed = (activity) => {
 };
 
 const createRegistration = async ({ userId, activityId }) => {
-  await beginTransaction();
+  const result = await withTransaction(async (connection) => {
 
-  try {
-    const activity = await getActivityWithContext(activityId);
+    const activity = await getActivityWithContext(
+      activityId,
+      connection
+    );
+
     if (!activity) {
-      throw createError("Activity not found", 404);
+      throw createError(
+        "Activity not found",
+        404
+      );
     }
 
-    const user = await getUser(userId);
+    const user = await getUser(
+      userId,
+      connection
+    );
+
     if (!user) {
-      throw createError("User not found", 404);
+      throw createError(
+        "User not found",
+        404
+      );
     }
 
-    const existing = await hasExistingRegistration(userId, activityId);
+    const existing = await hasExistingRegistration(
+      userId,
+      activityId,
+      connection
+    );
+
     if (existing) {
-      throw createError("You have already registered for this activity.", 409);
+      throw createError(
+        "You have already registered for this activity.",
+        409
+      );
     }
 
     if (isRegistrationClosed(activity)) {
-      throw createError("Registration Closed", 400);
+      throw createError(
+        "Registration Closed",
+        400
+      );
     }
 
-    const registeredCount = await getRegisteredCount(activityId);
-    if (activity.max_participants && registeredCount >= Number(activity.max_participants)) {
-      throw createError("Registration Closed", 400);
-    }
-
-    const result = await query(
-      `INSERT INTO registrations (user_id, activity_id, status, payment_status, attendance_status)
-       VALUES (?, ?, 'registered', 'free', 'pending')`,
-      [userId, activityId]
+    const registeredCount = await getRegisteredCount(
+      activityId,
+      connection
     );
 
-    const registrationId = buildRegistrationId(result.insertId);
-    await query(
-      "UPDATE registrations SET registration_id = ? WHERE id = ?",
-      [registrationId, result.insertId]
+    if (
+      activity.max_participants &&
+      registeredCount >= Number(
+        activity.max_participants
+      )
+    ) {
+      throw createError(
+        "Registration Closed",
+        400
+      );
+    }
+
+    const [insertResult] = await connection.query(
+      `INSERT INTO registrations
+       (
+         user_id,
+         activity_id,
+         status,
+         payment_status,
+         attendance_status
+       )
+       VALUES (?, ?, 'registered', 'free', 'pending')`,
+      [
+        userId,
+        activityId
+      ]
+    );
+
+    const registrationId = buildRegistrationId(
+      insertResult.insertId
+    );
+
+    await connection.query(
+      `UPDATE registrations
+       SET registration_id = ?
+       WHERE id = ?`,
+      [
+        registrationId,
+        insertResult.insertId
+      ]
     );
 
     const registration = {
-      id: result.insertId,
+      id: insertResult.insertId,
       registration_id: registrationId,
       status: "registered",
       payment_status: "free",
       attendance_status: "pending"
     };
 
-    const activityPayload = {
-      activity_name: activity.activity_name,
-      venue: activity.venue,
-      event_date_label: formatDateLabel(activity.event_date),
-      start_time_label: formatTimeLabel(activity.start_time)
-    };
-
-    await commit();
-
-    try {
-      await sendRegistrationConfirmation({
-        to: user.email,
-        studentName: user.name,
-        registration,
-        activity: activityPayload,
-        event: {
-          name: activity.event_name
-        },
-        collegeName: activity.organizer_college_name || user.college_name
-      });
-    } catch (emailError) {
-      console.error("Registration email failed:", emailError.message);
-    }
-
     return {
       registration,
       user,
       activity,
-      remainingSeats: activity.max_participants ? Math.max(Number(activity.max_participants) - registeredCount - 1, 0) : null
+      registeredCount
     };
-  } catch (error) {
-    await rollback();
-    throw error;
+  });
+
+  // Send email only after successful DB commit
+  try {
+    await sendRegistrationConfirmation({
+      to: result.user.email,
+      studentName: result.user.name,
+      registration: result.registration,
+      activity: {
+        activity_name: result.activity.activity_name,
+        venue: result.activity.venue,
+        event_date_label: formatDateLabel(
+          result.activity.event_date
+        ),
+        start_time_label: formatTimeLabel(
+          result.activity.start_time
+        )
+      },
+      event: {
+        name: result.activity.event_name
+      },
+      collegeName:
+        result.activity.organizer_college_name ||
+        result.user.college_name
+    });
+
+  } catch (emailError) {
+    console.error(
+      "Registration email failed:",
+      emailError.message
+    );
   }
+
+  return {
+    registration: result.registration,
+    user: result.user,
+    activity: result.activity,
+    remainingSeats:
+      result.activity.max_participants
+        ? Math.max(
+            Number(
+              result.activity.max_participants
+            ) -
+              result.registeredCount -
+              1,
+            0
+          )
+        : null
+  };
 };
 
 const getUserRegistrations = async (userId) => {
@@ -311,50 +427,81 @@ const getRegistrationById = async (registrationId) => {
   return rows[0] || null;
 };
 
-const cancelRegistration = async ({ registrationId, user }) => {
-  await beginTransaction();
+const cancelRegistration = async ({
+  registrationId,
+  user
+}) => {
 
-  try {
+  return withTransaction(async (connection) => {
+
     const rows = await query(
-      `SELECT r.*, ea.created_by, ea.event_date, ea.start_time, ea.registration_open
+      `SELECT
+         r.*,
+         ea.created_by,
+         ea.event_date,
+         ea.start_time,
+         ea.registration_open
        FROM registrations r
-       JOIN event_activities ea ON r.activity_id = ea.id
+       JOIN event_activities ea
+         ON r.activity_id = ea.id
        WHERE r.id = ?`,
-      [registrationId]
+      [registrationId],
+      connection
     );
 
     const registration = rows[0];
+
     if (!registration) {
-      throw createError("Registration not found", 404);
+      throw createError(
+        "Registration not found",
+        404
+      );
     }
 
-    const canCancel = user.role === "admin" || Number(registration.user_id) === Number(user.id);
+    const canCancel =
+      user.role === "admin" ||
+      Number(registration.user_id) ===
+      Number(user.id);
+
     if (!canCancel) {
-      throw createError("Forbidden. Insufficient permissions.", 403);
+      throw createError(
+        "Forbidden. Insufficient permissions.",
+        403
+      );
     }
 
-    if (registration.status === "completed") {
-      throw createError("Cannot cancel a completed registration.", 400);
+    if (
+      registration.status === "completed"
+    ) {
+      throw createError(
+        "Cannot cancel a completed registration.",
+        400
+      );
     }
 
-    if (registration.status === "cancelled") {
-      throw createError("Registration is already cancelled.", 400);
+    if (
+      registration.status === "cancelled"
+    ) {
+      throw createError(
+        "Registration is already cancelled.",
+        400
+      );
     }
 
-    await query(
+    await connection.query(
       `UPDATE registrations
-       SET status = 'cancelled', updated_at = NOW()
+       SET
+         status = 'cancelled',
+         updated_at = NOW()
        WHERE id = ?`,
       [registrationId]
     );
 
-    await commit();
-
-    return { message: "Registration cancelled successfully" };
-  } catch (error) {
-    await rollback();
-    throw error;
-  }
+    return {
+      message:
+        "Registration cancelled successfully"
+    };
+  });
 };
 
 module.exports = {

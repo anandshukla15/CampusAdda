@@ -1,64 +1,145 @@
 const db = require("../config/db");
 
-exports.getProfile = (req, res) => {
-  //console.log("User ID from token:", req.user);
-  const { id, role } = req.user;
-  if (id === "admin") {
-    return res.json({ id: "admin", name: "AKS", email: process.env.ADMIN_USERNAME, role: "admin" });
+
+// Get logged-in user's profile
+exports.getProfile = async (req, res) => {
+  try {
+    const { id, role } = req.user;
+
+    // Admin profile
+    if (id === "admin") {
+      return res.json({
+        id: "admin",
+        name: "AKS",
+        email: process.env.ADMIN_USERNAME,
+        role: "admin"
+      });
+    }
+
+    const [result] = await db.query(
+      `SELECT 
+        id,
+        name,
+        email,
+        role,
+        college_name,
+        created_at
+       FROM users
+       WHERE id = ?`,
+      [id]
+    );
+
+    if (!result || result.length === 0) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    res.json(result[0]);
+
+  } catch (err) {
+    console.error("Get profile error:", err);
+
+    res.status(500).json({
+      error: err.message
+    });
   }
-
-  db.query(
-    "SELECT id,name,email,role,college_name,created_at FROM users WHERE id=?",
-    [id],
-    (err, result) => {
-      //console.log("Profile query result:", err);
-      if (err) return res.status(500).json(err);
-      
-      if (!result || result.length === 0) return res.status(404).json({ message: "User not found" });
-      
-      res.json(result[0]);
-    }
-  );
 };
 
-exports.getUsers = (req, res) => {
-  db.query(
-    "SELECT id, name, email, role, college_id, college_name, created_at FROM users",
-    (err, result) => {
-      if (err) return res.status(500).json(err);
-      res.json(result);
-    }
-  );
+
+// Get all users
+exports.getUsers = async (req, res) => {
+  try {
+    const [result] = await db.query(
+      `SELECT 
+        id,
+        name,
+        email,
+        role,
+        college_id,
+        college_name,
+        created_at
+       FROM users`
+    );
+
+    res.json(result);
+
+  } catch (err) {
+    console.error("Get users error:", err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
 };
+
 
 // Admin: delete a user
-exports.deleteUser = (req, res) => {
-  const { userId } = req.params;
+exports.deleteUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
 
-  db.query("DELETE FROM users WHERE id = ?", [userId], (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: "User deleted" });
-  });
+    await db.query(
+      "DELETE FROM users WHERE id = ?",
+      [userId]
+    );
+
+    res.json({
+      message: "User deleted"
+    });
+
+  } catch (err) {
+    console.error("Delete user error:", err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
 };
 
-// Admin: update user role (e.g., remove president -> user)
-exports.updateUserRole = (req, res) => {
-  const { userId } = req.params;
-  const { role } = req.body;
 
-  if (!role) return res.status(400).json({ error: "Role is required" });
+// Admin: update user role
+exports.updateUserRole = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { role } = req.body;
 
-  db.query("UPDATE users SET role = ? WHERE id = ?", [role, userId], (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-
-    // If downgrading to 'user', remove any president application record
-    if (role === 'user') {
-      db.query("DELETE FROM president_applications WHERE user_id = ?", [userId], (err2) => {
-        if (err2) console.error("Error removing president application:", err2.message);
-        return res.json({ message: "User role updated" });
+    if (!role) {
+      return res.status(400).json({
+        error: "Role is required"
       });
-    } else {
-      res.json({ message: "User role updated" });
     }
-  });
+
+    await db.query(
+      "UPDATE users SET role = ? WHERE id = ?",
+      [role, userId]
+    );
+
+    // If user is downgraded from president to user,
+    // delete their president application
+    if (role === "user") {
+      try {
+        await db.query(
+          "DELETE FROM president_applications WHERE user_id = ?",
+          [userId]
+        );
+      } catch (err2) {
+        console.error(
+          "Error removing president application:",
+          err2.message
+        );
+      }
+    }
+
+    res.json({
+      message: "User role updated"
+    });
+
+  } catch (err) {
+    console.error("Update user role error:", err);
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
 };

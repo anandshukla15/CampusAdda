@@ -5,7 +5,10 @@ const canManageEvent = (event, user) => {
 
   return (
     user.role === "admin" ||
-    (user.role === "president" && event.created_by === user.id)
+    (
+      user.role === "president" &&
+      String(event.created_by) === String(user.id)
+    )
   );
 };
 
@@ -61,7 +64,7 @@ exports.createActivity = async (req, res) => {
 
     const result = await EventActivity.create(activity);
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Activity created successfully",
       activityId: result.insertId
     });
@@ -69,7 +72,7 @@ exports.createActivity = async (req, res) => {
   } catch (error) {
     console.error("Error creating activity:", error);
 
-    res.status(error.statusCode || 500).json({
+    return res.status(error.statusCode || 500).json({
       error: error.message
     });
   }
@@ -89,12 +92,12 @@ exports.getActivitiesByEvent = async (req, res) => {
       req.params.eventId
     );
 
-    res.json(activities);
+    return res.json(activities);
 
   } catch (error) {
     console.error("Error fetching activities:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message
     });
   }
@@ -136,14 +139,14 @@ exports.updateActivity = async (req, res) => {
       activity
     );
 
-    res.json({
+    return res.json({
       message: "Activity updated successfully"
     });
 
   } catch (error) {
     console.error("Error updating activity:", error);
 
-    res.status(error.statusCode || 500).json({
+    return res.status(error.statusCode || 500).json({
       error: error.message
     });
   }
@@ -167,14 +170,14 @@ exports.deleteActivity = async (req, res) => {
 
     await EventActivity.delete(req.params.id);
 
-    res.json({
+    return res.json({
       message: "Activity deleted successfully"
     });
 
   } catch (error) {
     console.error("Error deleting activity:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message
     });
   }
@@ -217,7 +220,7 @@ exports.updateRegistrationStatus = async (req, res) => {
       ]
     );
 
-    res.json({
+    return res.json({
       message: registration_open
         ? "Registrations reopened"
         : "Registrations closed"
@@ -229,7 +232,7 @@ exports.updateRegistrationStatus = async (req, res) => {
       error
     );
 
-    res.status(error.statusCode || 500).json({
+    return res.status(error.statusCode || 500).json({
       error: error.message
     });
   }

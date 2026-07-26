@@ -1,7 +1,11 @@
 const db = require("../config/db");
 
-const query = async (sql, params = []) => {
-  const [rows] = await db.query(sql, params);
+const query = async (
+  sql,
+  params = [],
+  connection = db
+) => {
+  const [rows] = await connection.query(sql, params);
   return rows;
 };
 
@@ -71,25 +75,34 @@ exports.query = query;
 exports.normalizeActivity = normalizeActivity;
 exports.validateActivity = validateActivity;
 
-exports.findByEventId = (eventId) =>
+exports.findByEventId = (eventId, connection = db) =>
   query(
     `SELECT *
      FROM event_activities
      WHERE event_id = ?
      ORDER BY event_date ASC, start_time ASC, id ASC`,
-    [eventId]
+    [eventId],
+    connection
   );
 
-exports.findById = (id) =>
+exports.findById = (id, connection = db) =>
   query(
     `SELECT ea.*, e.created_by
      FROM event_activities ea
      JOIN events e ON ea.event_id = e.id
      WHERE ea.id = ?`,
-    [id]
+    [id],
+    connection
   );
 
-exports.create = (activity) => insertActivity(activity);
+exports.create = (
+  activity,
+  connection = db
+) =>
+  insertActivity(
+    activity,
+    connection
+  );
 
 exports.bulkCreate = async (
   eventId,
@@ -118,7 +131,11 @@ exports.bulkCreate = async (
   return normalizedActivities;
 };
 
-exports.update = (id, activity) =>
+exports.update = (
+  id,
+  activity,
+  connection = db
+) =>
   query(
     `UPDATE event_activities
      SET
@@ -141,28 +158,34 @@ exports.update = (id, activity) =>
       activity.registration_link,
       activity.max_participants,
       id
-    ]
+    ],
+    connection
   );
 
-exports.delete = (id) =>
+exports.delete = (id, connection = db) =>
   query(
     "DELETE FROM event_activities WHERE id = ?",
-    [id]
+    [id],
+    connection
   );
 
 exports.replaceForEvent = async (
   eventId,
   activities,
-  fallbackType
+  fallbackType,
+  connection = db
 ) => {
   await query(
     "DELETE FROM event_activities WHERE event_id = ?",
-    [eventId]
+    [eventId],
+    connection
   );
+  
 
   return exports.bulkCreate(
     eventId,
     activities,
-    fallbackType
+    fallbackType,
+    connection
   );
 };
