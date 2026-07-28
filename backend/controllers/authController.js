@@ -43,7 +43,7 @@ exports.register = async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
 
-    connection = await db.promise().getConnection();
+    connection = await db.getConnection();
 
     await connection.beginTransaction();
 
@@ -114,6 +114,17 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+     const adminUser = process.env.ADMIN_USERNAME;
+  const adminPass = process.env.ADMIN_PASSWORD;
+  const adminEmail = process.env.ADMIN_EMAIL;
+
+  if (adminUser && adminPass && email === adminEmail) {
+    if (password !== adminPass) return res.status(400).json({ msg: "Wrong password" });
+
+    const token = jwt.sign({ id: "admin", role: "admin" }, process.env.JWT_SECRET);
+    return res.json({ token, role: "admin", userId: "admin" });
+  }
 
     //console.log("Login request:", email);
 
