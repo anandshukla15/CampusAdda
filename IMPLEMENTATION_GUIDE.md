@@ -65,6 +65,51 @@ npm install
 npm start
 ```
 
+### Agentic AI service
+
+```bash
+cd ai-service
+python -m pip install -r requirements.txt
+GOOGLE_API_KEY=your_key NODE_API_URL=http://localhost:5000/api/ai uvicorn main:app --port 8000
+```
+
+On Windows PowerShell, set the two variables with `$env:GOOGLE_API_KEY` and
+`$env:NODE_API_URL` before starting Uvicorn. Add
+`AI_SERVICE_URL=http://localhost:8000` to the backend environment.
+
+### Agent architecture
+
+`main.py` validates HTTP requests and owns index lifecycle endpoints.
+`graph/graph.py` builds the LangGraph `StateGraph`: agent → `ToolNode` → agent
+until Gemini produces a final response. It uses `MemorySaver` and a
+`RunnableConfig` thread ID, so follow-up queries retain prior context.
+
+`agent.py` creates Gemini with `bind_tools()`. The tools have narrow roles:
+search, recommendations, nearby events, registration details, and Campus Adda
+FAQ. Their schemas are structured LangChain tool contracts. `services/node_api.py`
+is the only read path to the Node/MySQL API and includes bounded retry logic.
+Chroma is used only by the recommendation tool to rank already authoritative
+Node/MySQL results.
+
+| File/folder | Responsibility |
+| --- | --- |
+| `config.py` | Environment-based model and result limits. |
+| `main.py` | Validated FastAPI contracts, compatibility routes, index lifecycle. |
+| `agent.py` | Gemini construction, system instructions, `bind_tools()`. |
+| `graph/state.py` | Typed graph state with message aggregation. |
+| `graph/graph.py` | Conditional StateGraph and ToolNode execution loop. |
+| `services/memory.py` | Checkpointer creation. |
+| `services/node_api.py` | Retried boundary client for Node/MySQL. |
+| `tools/*.py` | One dedicated, schema-defined business capability per tool. |
+| `langgraph_chatbot/service.py` | Legacy endpoint facade and RunnableConfig thread wiring. |
+| `rag_service.py` | Event upsert/delete index and semantic lookup only. |
+
+The browser continues to call `POST /api/ai/chat` with `{ query }`; it may add
+`thread_id`. Node forwards the request to FastAPI and returns the same `answer`,
+`events`, `intent`, `route`, and `retrieval_context` fields. On create/update,
+Node pushes the event to FastAPI for an upsert; on delete it sends a delete
+action. No chat code calls `index_event`.
+
 ## Workflow & Features
 
 ### 1. Authentication

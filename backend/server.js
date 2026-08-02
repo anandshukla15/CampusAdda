@@ -27,6 +27,7 @@ const aiRoutes = require("./routes/aiRoutes");
 require("./config/db");
 require("./config/passport");
 
+
 const socketConfig = require("./config/socket");
 const chatSocket = require("./sockets/chatSocket");
 

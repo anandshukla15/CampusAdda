@@ -1,29 +1,34 @@
+"""Resilient client for the Node API, which remains the MySQL boundary."""
+import logging
+import os
+from typing import Any, Dict, List
+
+from fastapi import params
 import requests
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-BASE_URL = "https://campusadda-8e15.onrender.com/api/ai"
+logger = logging.getLogger(__name__)
+BASE_URL = os.getenv("NODE_API_URL", "http://localhost:5000/api/ai").rstrip("/")
 
 
-def search_events(query):
+@retry(retry=retry_if_exception_type(requests.RequestException), stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=4), reraise=True)
+def _get(path: str, params: Dict[str, Any]) -> Any:
+    url = f"{BASE_URL}{path}"
+    
+
+    response = requests.get(url, params=params, timeout=10)
+
+   
+
+    response.raise_for_status()
+    return response.json()
+
+
+def search_events(query: str, **filters: Any) -> List[Dict[str, Any]]:
+    """Retrieve authoritative events from Node/MySQL; never from Chroma alone."""
     try:
-        response = requests.get(
-            f"{BASE_URL}/events/search",
-            params={"q": query},
-            timeout=10
-        )
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException:
+        payload = _get("/events/search", {"q": query, **{k: v for k, v in filters.items() if v}})
+        return payload if isinstance(payload, list) else []
+    except requests.RequestException as exc:
+        logger.warning("Node event search unavailable: %s", exc)
         return []
-
-
-def index_event(event):
-    try:
-        response = requests.post(
-            f"{BASE_URL}/events/index",
-            json=event,
-            timeout=10
-        )
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException:
-        return {"status": "skipped"}

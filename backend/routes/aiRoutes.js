@@ -7,13 +7,10 @@ const router = express.Router();
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL ;
 
-const queryDb = (sql, params = []) =>
-  new Promise((resolve, reject) => {
-    db.query(sql, params, (err, result) => {
-      if (err) return reject(err);
-      resolve(result);
-    });
-  });
+const queryDb = async (sql, params = []) => {
+  const [rows] = await db.query(sql, params);
+  return rows;
+};
 
 const attachActivities = async (events) => {
   if (!events.length) return events;
@@ -49,7 +46,7 @@ const getSearchTerms = (search) => {
 };
 
 router.post("/chat", async (req, res) => {
-  const { query } = req.body;
+  const { query, thread_id } = req.body;
 
   if (!query || !query.trim()) {
     return res.status(400).json({ error: "Query is required" });
@@ -58,7 +55,7 @@ router.post("/chat", async (req, res) => {
   try {
     const response = await axios.post(
       `${AI_SERVICE_URL}/langgraph/chat`,
-      { query: query.trim() },
+      { query: query.trim(), thread_id: thread_id || req.user?.id?.toString() },
       { timeout: 30000 }
     );
 
@@ -93,7 +90,7 @@ router.get("/events/search", async (req, res) => {
   const terms = getSearchTerms(search);
   const searchConditions = [];
   const searchParams = [];
-
+  
   terms.forEach((term) => {
     const like = `%${term}%`;
     searchConditions.push(
@@ -118,6 +115,7 @@ router.get("/events/search", async (req, res) => {
   });
 
   try {
+    
     const events = await queryDb(
       `SELECT e.id, e.name, e.category, e.date, e.description, e.location, e.link,
               u.name as created_by_name, u.college_name as creator_college_name
@@ -129,7 +127,6 @@ router.get("/events/search", async (req, res) => {
        LIMIT 10`,
       [search, ...searchParams]
     );
-
     res.json(await attachActivities(events));
   } catch (error) {
     res.status(500).json({ error: error.message });

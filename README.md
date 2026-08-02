@@ -20,6 +20,25 @@ npm run dev
 
 The backend will run on port 5000 by default.
 
+AI service
+
+The chatbot is a separate FastAPI/LangGraph service. It retains the existing
+`POST /api/ai/chat` frontend contract and accepts an optional `thread_id` for
+conversation memory.
+
+```powershell
+cd ai-service
+..\.venv\Scripts\python.exe -m pip install -r requirements.txt
+$env:GOOGLE_API_KEY = "your Gemini API key"
+$env:NODE_API_URL = "http://localhost:5000/api/ai"
+..\.venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000
+```
+
+Set `AI_SERVICE_URL=http://localhost:8000` in `backend/.env`. Event creation,
+updates, and deletion synchronise Chroma through `/index-event`; chat requests
+never index events. MySQL, accessed through the Node API, remains the source
+of truth.
+
 Backend admin login
 - The app supports an environment-based admin login via `ADMIN_USERNAME` and `ADMIN_PASSWORD` in `.env`.
 - If a login matches those credentials, the backend will issue a token with `role = admin`.

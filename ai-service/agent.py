@@ -1,26 +1,28 @@
-import os
-from dotenv import load_dotenv
+import logging
+from typing import List
 
-try:
-    import google.generativeai as genai
-except ImportError:  # pragma: no cover - optional dependency
-    genai = None
+from langchain_core.messages import AIMessage, SystemMessage
 
-load_dotenv()
+from config import GEMINI_MODEL, GEMINI_API_KEY
+from prompts.system_prompt import SYSTEM_PROMPT
+from tools import ALL_TOOLS
 
-api_key = os.getenv("GEMINI_API_KEY")
-model = None
-if genai is not None and api_key:
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.5-flash")
+logger = logging.getLogger(__name__)
 
 
-def ask_llm(prompt):
-    if not api_key or model is None:
-        return (
-            "Gemini is not configured yet. Add GEMINI_API_KEY in ai-service/.env. "
-            "I can still return a retrieval-based answer from the indexed event data."
-        )
+def create_agent_model():
+    """Create Gemini with native LangChain tool binding, or return None when unconfigured."""
+    if not GEMINI_API_KEY:
+        logger.warning("Gemini key missing; using deterministic offline response")
+        return None
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    print("Using model:", GEMINI_MODEL)
+    return ChatGoogleGenerativeAI(model=GEMINI_MODEL, google_api_key=GEMINI_API_KEY, temperature=0).bind_tools(ALL_TOOLS)
 
-    response = model.generate_content(prompt)
-    return response.text or "I could not generate an answer right now."
+
+def offline_answer(messages: List[object]) -> AIMessage:
+    return AIMessage(content="I can help with Campus Adda events. Configure Gemini to enable AI tool selection and detailed answers.")
+
+
+def system_message() -> SystemMessage:
+    return SystemMessage(content=SYSTEM_PROMPT)

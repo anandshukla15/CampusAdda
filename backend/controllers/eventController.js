@@ -81,6 +81,16 @@ const triggerAiIndexing = async (eventPayload, activities = []) => {
   }
 };
 
+const triggerAiDeletion = async (eventId) => {
+  try {
+    await axios.post(`${process.env.AI_SERVICE_URL || "http://localhost:8000"}/index-event`, {
+      action: "delete", event_id: String(eventId)
+    }, { timeout: 15000 });
+  } catch (error) {
+    console.error("AI index deletion failed:", error.message);
+  }
+};
+
 const sendNewEventNotification = async (
   eventId,
   event,
@@ -438,6 +448,7 @@ exports.deleteEvent = async (req, res) => {
     }
 
     await query("DELETE FROM events WHERE id = ?", [id]);
+    triggerAiDeletion(id);
     res.json({ message: "Event deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
